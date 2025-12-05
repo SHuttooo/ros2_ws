@@ -11,7 +11,12 @@
 <body>
 
     <header>
-        <h1>🎮 ROS2 Robot Interface</h1>
+        <h1>🎮 Robot serre</h1>
+        <div class="header">
+            <a href="index.html">
+                <img src="logo-polytech.png" alt="Logo Polytech" class="logo">
+            </a>
+        </div>
         <div style="display: flex; align-items: center; gap: 15px;">
             <button id="btnSettings" onclick="toggleSettings()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">⚙️</button>
             <div id="status" class="disconnected">Déconnecté</div>
@@ -19,7 +24,8 @@
     </header>
 
     <div class="container">
-        <div class="panel video-panel">
+
+        <div class="panel video-panel column1">
             <h2>🎥 Live Feed</h2>
             <div class="video-container" onclick="toggleFullscreen()">
                 <img id="cameraFeed" src="" alt="En attente de la caméra...">
@@ -27,25 +33,42 @@
             <p class="hint">Cliquer pour Plein Écran</p>
         </div>
 
-        <div class="panel controls-panel">
-            <h2>🕹️ Robot (ZQSD)</h2>
-            <div class="dpad">
-                <button onmousedown="sendCmd('up')" onmouseup="sendCmd('stop')" ontouchstart="sendCmd('up')" ontouchend="sendCmd('stop')">⬆️<br><span class="key-hint">Z</span></button>
-                <div>
-                    <button onmousedown="sendCmd('left')" onmouseup="sendCmd('stop')" ontouchstart="sendCmd('left')" ontouchend="sendCmd('stop')">⬅️<br><span class="key-hint">Q</span></button>
-                    <button onmousedown="sendCmd('down')" onmouseup="sendCmd('stop')" ontouchstart="sendCmd('down')" ontouchend="sendCmd('stop')">⬇️<br><span class="key-hint">S</span></button>
-                    <button onmousedown="sendCmd('right')" onmouseup="sendCmd('stop')" ontouchstart="sendCmd('right')" ontouchend="sendCmd('stop')">➡️<br><span class="key-hint">D</span></button>
+        <div class="panel controls-panel column1">
+            <div id ="robotControls">
+                <h2>🕹️ Robot</h2>
+                <div class="dpad">
+                    <button onmousedown="sendCmd('up')" onmouseup="sendCmd('stop')" ontouchstart="sendCmd('up')" ontouchend="sendCmd('stop')">⬆️<br><span class="key-hint">Z</span></button>
+                    <div>
+                        <button onmousedown="sendCmd('left')" onmouseup="sendCmd('stop')" ontouchstart="sendCmd('left')" ontouchend="sendCmd('stop')">⬅️<br><span class="key-hint">Q</span></button>
+                        <button onmousedown="sendCmd('down')" onmouseup="sendCmd('stop')" ontouchstart="sendCmd('down')" ontouchend="sendCmd('stop')">⬇️<br><span class="key-hint">S</span></button>
+                        <button onmousedown="sendCmd('right')" onmouseup="sendCmd('stop')" ontouchstart="sendCmd('right')" ontouchend="sendCmd('stop')">➡️<br><span class="key-hint">D</span></button>
+                    </div>
                 </div>
             </div>
-
-            <h2>📷 PTZ (OKLM)</h2>
-            <div class="dpad">
-                <button onmousedown="sendPtz('up')" onmouseup="sendPtz('stop')">⬆️<br><span class="key-hint">O</span></button>
-                <div>
-                    <button onmousedown="sendPtz('left')" onmouseup="sendPtz('stop')">⬅️<br><span class="key-hint">K</span></button>
-                    <button onmousedown="sendPtz('down')" onmouseup="sendPtz('stop')">⬇️<br><span class="key-hint">L</span></button>
-                    <button onmousedown="sendPtz('right')" onmouseup="sendPtz('stop')">➡️<br><span class="key-hint">M</span></button>
+            <div class="actions">
+                <button class="btn-blue" onclick="takePhoto()">📸 Photo</button>
+                <button class="btn-red" id="btnRecord" onclick="toggleVideo()">🔴 REC</button>
+            </div>
+            <div id="cameraControls">
+                <h2>📷 Caméra</h2>
+                <div class="dpad">
+                    <button onmousedown="sendPtz('up')" onmouseup="sendPtz('stop')">⬆️<br><span class="key-hint">O</span></button>
+                    <div>
+                        <button onmousedown="sendPtz('left')" onmouseup="sendPtz('stop')">⬅️<br><span class="key-hint">K</span></button>
+                        <button onmousedown="sendPtz('down')" onmouseup="sendPtz('stop')">⬇️<br><span class="key-hint">L</span></button>
+                        <button onmousedown="sendPtz('right')" onmouseup="sendPtz('stop')">➡️<br><span class="key-hint">M</span></button>
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="panel terminal-panel">
+            <h2>📟 Logs Système</h2>
+            <div id="terminalOutput" class="terminal-content">
+                <div class="log-line">> Initializing system... OK</div>
+                <div class="log-line">> Connecting to camera... OK</div>
+                <div class="log-line">> Battery level: 84%</div>
+                <div class="log-line">> Waiting for input...</div>
             </div>
         </div>
 
@@ -65,11 +88,6 @@
                 <label>🦾 Hauteur Bras</label>
                 <input type="range" min="0" max="100" value="0" id="armSlider" oninput="updateArm(this.value)">
             </div>
-            
-            <div class="actions">
-                <button class="btn-blue" onclick="takePhoto()">📸 Photo</button>
-                <button class="btn-red" id="btnRecord" onclick="toggleVideo()">🔴 REC</button>
-            </div>
         </div>
 
         <div class="panel map-panel">
@@ -81,6 +99,7 @@
             <p id="clickCoords">x: 0, y: 0</p>
 
             <button id="btnMission" class="mission-btn start" onclick="toggleMission()">🚀 Lancer la mission</button>
+            <button id="btnReturnToBase" class="mission-btn start" onclick="returnToBase()">🏠 Revenir à la base</button>
         </div>
 
         <div class="panel gallery-panel">
@@ -90,10 +109,11 @@
         </div>
         
     </div>
+    
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="toggleSettings()">&times;</span>
-            <h2>⚙️ Réglages</h2>
+            <h2>⚙️ Réglages avancés</h2>
             
             <div class="slider-group">
                 <label>🚀 Vitesse Robot <span id="speedVal">50%</span></label>

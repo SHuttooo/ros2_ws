@@ -34,13 +34,40 @@ class WebBackend(Node):
     def __init__(self):
         super().__init__('web_backend')
         
+        # 1. Chemin vers les fichiers du site Web (HTML/JS) - Dossier d'installation ROS
         package_share = get_package_share_directory('web_control')
         self.web_dir = os.path.join(package_share, 'web')
-        self.gallery_dir = os.path.join(self.web_dir, 'gallery')
         
+        # 2. Chemin de stockage SÉCURISÉ (Dans ton dossier Home)
+        # Les fichiers iront dans /home/utilisateur/robot_gallery
+        home_dir = os.path.expanduser('~')
+        self.gallery_dir = os.path.join(home_dir, 'robot_gallery')
+        
+        # Création du dossier physique s'il n'existe pas
         if not os.path.exists(self.gallery_dir):
             os.makedirs(self.gallery_dir)
+            self.get_logger().info(f"Dossier de stockage créé: {self.gallery_dir}")
 
+        # 3. CRÉATION DU LIEN SYMBOLIQUE
+        # Le serveur web cherche les images dans 'web/gallery'.
+        # On crée un raccourci de 'web/gallery' vers '~/robot_gallery'.
+        link_path = os.path.join(self.web_dir, 'gallery')
+
+        # Nettoyage : si un dossier ou un vieux lien existe déjà à cet endroit, on l'enlève
+        if os.path.exists(link_path):
+            if os.path.islink(link_path):
+                os.unlink(link_path)       # Supprime le lien existant
+            else:
+                shutil.rmtree(link_path)   # Supprime le dossier physique (s'il a été créé par erreur)
+
+        # Création du nouveau lien
+        try:
+            os.symlink(self.gallery_dir, link_path)
+            self.get_logger().info(f"Lien symbolique créé de {link_path} vers {self.gallery_dir}")
+        except OSError as e:
+            self.get_logger().error(f"Erreur création lien symbolique: {e}")
+
+        # Initialisation des managers avec le dossier SÉCURISÉ
         self.capture_mgr = CaptureManager(self, self.gallery_dir)
         self.gallery_mgr = GalleryManager(self, self.gallery_dir)
 
@@ -49,7 +76,7 @@ class WebBackend(Node):
         self.srv_start_vid = self.create_service(Trigger, '/camera/start_video', self.cb_start_video)
         self.srv_stop_vid = self.create_service(Trigger, '/camera/stop_video', self.cb_stop_video)
 
-        # Subscribers (Modifiés en Point)
+        # Subscribers
         self.create_subscription(Point, '/robot/cmd_vel_buttons', self.cb_cmd_vel, 10)
         self.create_subscription(Point, '/camera/ptz', self.cb_ptz, 10)
         
