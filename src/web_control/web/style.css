@@ -1,0 +1,205 @@
+:root {
+    --bg-dark: #1e1e2e;
+    --bg-panel: #2a2a3c;
+    --accent: #00d4ff;
+    --text: #ffffff;
+    --mission-start: #2ecc71;
+    --mission-stop: #e74c3c;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    box-sizing: border-box;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--accent);
+}
+
+#status { padding: 5px 10px; border-radius: 5px; font-weight: bold; }
+.connected { background-color: #2ecc71; color: black; }
+.disconnected { background-color: #e74c3c; color: white; }
+
+.container {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 15px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.panel {
+    background-color: var(--bg-panel);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+h2 { margin-top: 0; font-size: 1.2rem; color: var(--accent); border-bottom: 1px solid #444; padding-bottom: 5px; }
+
+/* VIDEO OPTIMISÉE */
+.video-panel { 
+    grid-column: 1 / 2; grid-row: 1 / 3; 
+    display: flex; flex-direction: column; 
+    padding: 4px; background-color: black; border: 1px solid #444; position: relative; 
+}
+.video-panel h2 {
+    position: absolute; top: 10px; left: 10px; z-index: 10;
+    background: rgba(0, 0, 0, 0.5); padding: 5px 10px; border-radius: 4px;
+    border-bottom: none; font-size: 0.9rem; pointer-events: none;
+}
+.video-container { flex-grow: 1; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+#cameraFeed { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* CONTROLS & TOUCHES */
+.controls-panel { grid-column: 2 / 3; text-align: center; }
+.dpad { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-bottom: 20px; }
+.dpad button {
+    width: 60px; height: 60px; font-size: 18px;
+    background: #444; border: none; color: white; border-radius: 8px; cursor: pointer;
+    line-height: 1.2;
+}
+.dpad button:active, .dpad button.active-key { background: var(--accent); color: black; }
+
+/* Style pour l'indication des touches (Z,Q,S,D...) */
+.key-hint { font-size: 0.7rem; color: #aaa; font-weight: bold; display: block; margin-top: 2px; }
+.dpad button:active .key-hint, .dpad button.active-key .key-hint { color: #000; }
+
+/* SLIDERS */
+.sliders-panel { grid-column: 2 / 3; }
+.slider-group { margin-bottom: 15px; }
+input[type=range] { width: 100%; cursor: pointer; }
+.actions { display: flex; gap: 10px; justify-content: center; }
+button { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+.btn-blue { background-color: #3498db; }
+.btn-red { background-color: #e74c3c; }
+
+/* MAP & MISSION */
+.map-panel { grid-column: 3 / 4; grid-row: 1 / 2; display: flex; flex-direction: column; }
+.map-area {
+    flex-grow: 1; background: #333; position: relative;
+    cursor: crosshair; border: 1px solid #666; min-height: 150px;
+    background-size: cover; background-position: center;
+}
+
+/* --- 🖼️ POUR METTRE TON IMAGE DE FOND --- */
+.custom-map-bg {
+    background-image: url('map_placeholder.png'); 
+    background-color: #222;
+}
+
+.mission-btn {
+    margin-top: 15px; width: 100%; padding: 15px;
+    font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;
+    transition: background 0.3s;
+}
+.mission-btn.start { background-color: var(--mission-start); color: #000; }
+.mission-btn.stop { background-color: var(--mission-stop); color: #fff; animation: pulse 2s infinite; }
+
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+
+/* GALLERY & SUPPRESSION */
+.gallery-panel { grid-column: 3 / 4; grid-row: 2 / 3; overflow-y: auto; max-height: 300px; }
+.gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
+
+/* Nouveau style pour le conteneur d'image */
+.gallery-item { 
+    position: relative; /* Permet de positionner le bouton X en absolu par rapport à l'image */
+}
+.gallery-item img { width: 100%; height: auto; border-radius: 4px; border: 1px solid #555; display: block; }
+
+/* --- BOUTON SUPPRESSION (Design Amélioré) --- */
+.btn-delete {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    
+    width: 24px;
+    height: 24px;
+    border-radius: 50%; /* Cercle parfait */
+    
+    background-color: rgba(220, 20, 60, 0.9); /* Rouge Crimson légèrement transparent */
+    color: white;
+    border: 2px solid white; /* Petit bord blanc pour le contraste */
+    
+    /* Centrage parfait de la croix */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1; /* Important pour la hauteur de ligne */
+    
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Ombre pour détacher du fond */
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.btn-delete:hover {
+    background-color: rgb(255, 0, 0); /* Rouge vif au survol */
+    transform: scale(1.1); /* Grossit légèrement */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+    .container { grid-template-columns: 1fr; grid-template-rows: auto; }
+    .video-panel { grid-column: 1; grid-row: 1; height: 300px; }
+    .controls-panel, .sliders-panel, .map-panel, .gallery-panel { grid-column: 1; grid-row: auto; }
+}
+
+/* --- STYLES POUR LA MODALE (POPUP) --- */
+
+/* Le bouton engrenage tourne quand on passe la souris dessus */
+#btnSettings { transition: transform 0.5s ease; color: white; }
+#btnSettings:hover { transform: rotate(180deg); }
+
+/* Le fond noir derrière la fenêtre */
+.modal {
+    display: none; /* Caché par défaut */
+    position: fixed; 
+    z-index: 1000; /* Au-dessus de tout */
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.2); /* Fond semi-transparent */
+    backdrop-filter: blur(5px); /* Petit effet de flou sympa */
+}
+
+/* La boîte de contenu */
+.modal-content {
+    background-color: var(--bg-panel);
+    margin: 10% auto; /* 10% du haut, centré horizontalement */
+    padding: 20px;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    width: 300px; /* Largeur de la fenêtre */
+    position: relative;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+/* La croix pour fermer */
+.close-modal {
+    position: absolute;
+    top: 5px; right: 10px;
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.close-modal:hover { color: white; }
