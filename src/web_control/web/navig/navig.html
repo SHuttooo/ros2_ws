@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation sur Carte</title>
+    <link rel="stylesheet" href="navig.css">
+</head>
+<body>
+    <div id="container">
+        <div id="map-container">
+            <div class="zoom-controls">
+                <button id="zoom-in">+</button>
+                <button id="zoom-out">-</button>
+            </div>
+            <div id="map-world">
+                <svg id="trajectory-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                    <polyline id="trajectory-path" fill="none" stroke="orange" stroke-opacity="0.5" stroke-width="30"/>
+                </svg>
+                <img src="" alt="Carte" id="map-image">
+            </div>
+        </div>
+        <div id="controls">
+            <h2>Contrôles</h2>
+            <div id="coordinates-display">
+                <p>Coordonnées GPS du point sélectionné :</p>
+                <span id="gps-coords"></span>
+            </div>
+            <div id="point-list-container">
+                <h3>Trajet</h3>
+                <ul id="point-list">
+                    <!-- Les points du trajet seront ajoutés ici -->
+                </ul>
+            </div>
+            <button id="send-trajectory">Envoyer le trajet</button>
+            <button id="clear-trajectory">Effacer le trajet</button>
+            <button id="remove-last-point">Supprimer le dernier point</button>
+            <a href="../index.html" class="back-button">Retour à l'accueil</a>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+    <script src="navig.js"></script>
+</body>
+</html>

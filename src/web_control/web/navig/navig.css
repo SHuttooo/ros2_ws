@@ -1,0 +1,147 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+#container {
+    display: flex;
+    width: 90%;
+    max-width: 1200px;
+    height: 80vh;
+    border: 1px solid #ccc;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#map-container {
+    flex: 3;
+    overflow: hidden; /* Hide overflow when zooming */
+    position: relative;
+    background-color: #e9e9e9; /* Background for the map area */
+    cursor: grab;
+}
+
+#map-container:active {
+    cursor: grabbing;
+}
+
+#map-world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    /* Transition removed for smoother direct manipulation, 
+       can be added back if we only use buttons */
+}
+
+#map-image {
+    display: block;
+    /* Remove object-fit to allow full size */
+    pointer-events: none; /* Let events pass to container or handle carefully */
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.map-marker {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background-color: red;
+    border-radius: 50%;
+    border: 10px solid white;
+    transform: translate(-50%, -50%); /* Center the marker on the click */
+    pointer-events: none; /* Allow clicking through the marker */
+}
+
+.map-marker.photography {
+    background-color: #00ff00; /* Green for photography points */
+}
+
+.map-marker.start {
+    background-color: black; /* Black for start point */
+    z-index: 5; /* Ensure it's visible */
+}
+
+.zoom-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+}
+
+.zoom-controls button {
+    width: 30px;
+    height: 30px;
+    font-size: 1.2rem;
+    padding: 0;
+    margin-bottom: 5px;
+    line-height: 30px;
+    text-align: center;
+}
+
+#controls {
+    flex: 1;
+    padding: 20px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+h2, h3 {
+    margin-top: 0;
+}
+
+#coordinates-display {
+    margin-bottom: 20px;
+}
+
+#point-list-container {
+    flex-grow: 1;
+    border: 1px solid #eee;
+    padding: 10px;
+    margin-bottom: 20px;
+    overflow-y: auto;
+}
+
+#point-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#point-list li {
+    padding: 5px;
+    border-bottom: 1px solid #eee;
+}
+
+button {
+    padding: 10px 15px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.back-button {
+    display: inline-block;
+    padding: 10px 15px;
+    background-color: #6c757d;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+}
+
+.back-button:hover {
+    background-color: #5a6268;
+}
