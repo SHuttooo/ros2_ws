@@ -13,6 +13,23 @@
                 <button id="zoom-in">+</button>
                 <button id="zoom-out">-</button>
             </div>
+            <div class="settings-container">
+                <button id="settings-btn" class="settings-button">
+                    <img src="settings.png" alt="Paramètres">
+                </button>
+                <div id="settings-menu" class="settings-menu" style="display: none;">
+                    <h3>Paramètres</h3>
+                    <div class="setting-row">
+                        <label for="font-size-slider">Taille de police:</label>
+                        <input type="range" id="font-size-slider" min="1" max="3" value="2" step="1">
+                        <span id="font-size-label">Moyen</span>
+                    </div>
+                    <div class="setting-row">
+                        <label for="dark-mode-toggle">Mode sombre:</label>
+                        <button id="dark-mode-toggle" class="toggle-button">OFF</button>
+                    </div>
+                </div>
+            </div>
             <div id="map-world">
                 <svg id="trajectory-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
                     <polyline id="trajectory-path" fill="none" stroke="orange" stroke-opacity="0.5" stroke-width="30"/>
@@ -26,15 +43,50 @@
                 <p>Coordonnées GPS du point sélectionné :</p>
                 <span id="gps-coords"></span>
             </div>
-            <div id="point-list-container">
-                <h3>Trajet</h3>
-                <ul id="point-list">
-                    <!-- Les points du trajet seront ajoutés ici -->
-                </ul>
+            
+            <div class="trajectories-container">
+                <div class="collapsible-section">
+                    <div class="section-header" onclick="toggleSection('point-list-section')">
+                        <span>▼ Trajet actuel</span>
+                        <button id="save-trajectory" class="btn-save" onclick="event.stopPropagation(); saveTrajectoryToCookies()">💾</button>
+                    </div>
+                    <div id="point-list-section" class="section-content">
+                        <ul id="point-list">
+                            <!-- Les points du trajet seront ajoutés ici -->
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="collapsible-section">
+                    <div class="section-header" onclick="toggleSection('saved-trajectories-section')">
+                        <span>▼ Trajets sauvegardés</span>
+                    </div>
+                    <div id="saved-trajectories-section" class="section-content collapsed">
+                        <ul id="saved-trajectories-list">
+                            <!-- Les trajets sauvegardés seront listés ici -->
+                        </ul>
+                    </div>
+                </div>
             </div>
-            <button id="send-trajectory">Envoyer le trajet</button>
-            <button id="clear-trajectory">Effacer le trajet</button>
-            <button id="remove-last-point">Supprimer le dernier point</button>
+            
+            <div id="action-buttons-container">
+                <div id="trajectory-buttons">
+                    <div class="button-row">
+                        <button id="send-trajectory" class="btn-yellow btn-half">Envoyer le trajet</button>
+                        <button id="clear-trajectory" class="btn-red btn-half">Effacer le trajet</button>
+                    </div>
+                    <button id="remove-last-point">Supprimer le dernier point</button>
+                </div>
+                
+                <div id="edit-buttons" style="display:none;">
+                    <button id="clear-forbidden-areas">Effacer les zones interdites</button>
+                    <button id="reset-forbidden-areas">Réinitialiser les zones</button>
+                </div>
+            </div>
+            
+            <button id="toggle-edit-mode" class="btn-edit">Mode Édition: OFF</button>
+            
+            <button id="download-data" class="btn-download">📥 Télécharger les données</button>
             <a href="../index.html" class="back-button">Retour à l'accueil</a>
         </div>
     </div>
