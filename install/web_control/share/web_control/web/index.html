@@ -91,9 +91,13 @@
         </div>
 
         <div class="panel map-panel">
-            <h2>🗺️ Navigation</h2>
+            <h2>
+                <a href="navig/navig.html" target="_blank" style="text-decoration: none; color: inherit; cursor: pointer;">
+                    🗺️ Navigation 🔗
+                </a>
+            </h2>
             
-            <div class="map-area custom-map-bg" id="mapArea" onclick="handleMapClick(event)">
+            <div class="map-area custom-map-bg" id="mapArea" onclick="handleMapClick(event)" style="background-image:url('saint-cyr.png'); background-size:cover; background-position:center; background-repeat:no-repeat;">
                 <div id="clickMarker" style="display:none; position:absolute; color:red; font-weight:bold;">❌</div>
             </div>
             <p id="clickCoords">x: 0, y: 0</p>
