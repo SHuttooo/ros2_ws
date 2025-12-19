@@ -24,9 +24,12 @@ setup(
         
         # 3. Dossier Navig
         # Ici on copie le contenu de ton dossier navig
-        (os.path.join('share', package_name, 'web/navig'), glob('web/navig/*')),
+        (os.path.join('share', package_name, 'web/navig'), [f for f in glob('web/navig/*') if not os.path.basename(f).startswith('._')]),
         
-        # 4. Dossier Gallery (Optionnel, seulement si non vide)
+        # 4. Dossier Accueil
+        (os.path.join('share', package_name, 'web/accueil'), [f for f in glob('web/accueil/*') if not os.path.basename(f).startswith('._')]),
+        
+        # 5. Dossier Gallery (Optionnel, seulement si non vide)
         (os.path.join('share', package_name, 'web/gallery'), glob('web/gallery/*')),
     ],
     install_requires=['setuptools'],

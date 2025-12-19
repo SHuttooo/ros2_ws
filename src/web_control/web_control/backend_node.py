@@ -5,6 +5,8 @@ import threading
 import http.server
 import socketserver
 import shutil
+import json
+from datetime import datetime
 from ament_index_python.packages import get_package_share_directory
 from std_srvs.srv import Trigger
 from geometry_msgs.msg import Point # <--- Changement ici (Twist -> Point)
@@ -42,11 +44,16 @@ class WebBackend(Node):
         # Les fichiers iront dans /home/utilisateur/robot_gallery
         home_dir = os.path.expanduser('~')
         self.gallery_dir = os.path.join(home_dir, 'robot_gallery')
+        self.trajectories_dir = os.path.join(home_dir, 'trajectories')
         
-        # Création du dossier physique s'il n'existe pas
+        # Création des dossiers physiques s'ils n'existent pas
         if not os.path.exists(self.gallery_dir):
             os.makedirs(self.gallery_dir)
             self.get_logger().info(f"Dossier de stockage créé: {self.gallery_dir}")
+        
+        if not os.path.exists(self.trajectories_dir):
+            os.makedirs(self.trajectories_dir)
+            self.get_logger().info(f"Dossier trajectoires créé: {self.trajectories_dir}")
 
         # 3. CRÉATION DU LIEN SYMBOLIQUE
         # Le serveur web cherche les images dans 'web/gallery'.
@@ -60,12 +67,26 @@ class WebBackend(Node):
             else:
                 shutil.rmtree(link_path)   # Supprime le dossier physique (s'il a été créé par erreur)
 
-        # Création du nouveau lien
+        # Création du nouveau lien pour gallery
         try:
             os.symlink(self.gallery_dir, link_path)
             self.get_logger().info(f"Lien symbolique créé de {link_path} vers {self.gallery_dir}")
         except OSError as e:
-            self.get_logger().error(f"Erreur création lien symbolique: {e}")
+            self.get_logger().error(f"Erreur création lien symbolique gallery: {e}")
+        
+        # Création du lien symbolique pour trajectories
+        traj_link_path = os.path.join(self.web_dir, 'trajectories')
+        if os.path.exists(traj_link_path):
+            if os.path.islink(traj_link_path):
+                os.unlink(traj_link_path)
+            else:
+                shutil.rmtree(traj_link_path)
+        
+        try:
+            os.symlink(self.trajectories_dir, traj_link_path)
+            self.get_logger().info(f"Lien symbolique créé de {traj_link_path} vers {self.trajectories_dir}")
+        except OSError as e:
+            self.get_logger().error(f"Erreur création lien symbolique trajectories: {e}")
 
         # Initialisation des managers avec le dossier SÉCURISÉ
         self.capture_mgr = CaptureManager(self, self.gallery_dir)
@@ -82,6 +103,18 @@ class WebBackend(Node):
         
         # Subscriber pour suppression
         self.create_subscription(String, '/camera/delete_image', self.cb_delete_image, 10)
+        
+        # Subscriber pour sauvegarde de trajectoire
+        self.create_subscription(String, '/ui/save_trajectory', self.cb_save_trajectory, 10)
+        
+        # Subscriber pour suppression de trajectoire
+        self.create_subscription(String, '/ui/delete_trajectory', self.cb_delete_trajectory, 10)
+        
+        # Publisher pour la liste des trajectoires
+        self.traj_list_pub = self.create_publisher(String, '/ui/trajectory_files', 10)
+        
+        # Timer pour publier la liste des trajectoires périodiquement
+        self.create_timer(2.0, self.publish_trajectory_list)
 
         self.httpd = None
         self.server_thread = None
@@ -123,6 +156,76 @@ class WebBackend(Node):
                 self.gallery_mgr.publish_gallery()
             except Exception as e:
                 self.get_logger().error(f"Erreur suppression: {e}")
+    
+    # Sauvegarde de trajectoire
+    def cb_save_trajectory(self, msg):
+        try:
+            # Décoder le JSON
+            traj_data = json.loads(msg.data)
+            
+            # Récupérer le nom personnalisé ou générer un par défaut
+            if 'meta' in traj_data and 'name' in traj_data['meta']:
+                custom_name = traj_data['meta']['name']
+            else:
+                custom_name = "trajectory"
+            
+            # Nettoyer le nom (sécurité)
+            custom_name = custom_name.replace('/', '_').replace('\\', '_')
+            
+            # Générer le nom de fichier
+            filename = f"{custom_name}.json"
+            filepath = os.path.join(self.trajectories_dir, filename)
+            
+            # Vérifier si le fichier existe déjà
+            counter = 1
+            while os.path.exists(filepath):
+                filename = f"{custom_name}_{counter}.json"
+                filepath = os.path.join(self.trajectories_dir, filename)
+                counter += 1
+            
+            # Sauvegarder le fichier
+            with open(filepath, 'w') as f:
+                json.dump(traj_data, f, indent=2)
+            
+            self.get_logger().info(f"Trajectoire sauvegardée: {filename}")
+        except Exception as e:
+            self.get_logger().error(f"Erreur sauvegarde trajectoire: {e}")
+    
+    def publish_trajectory_list(self):
+        """Publie la liste des fichiers de trajectoires disponibles"""
+        try:
+            if not os.path.exists(self.trajectories_dir):
+                files = []
+            else:
+                files = [f for f in os.listdir(self.trajectories_dir) 
+                        if f.endswith('.json')]
+                files.sort()  # Trier par ordre alphabétique
+            
+            msg = String()
+            msg.data = json.dumps(files)
+            self.traj_list_pub.publish(msg)
+        except Exception as e:
+            self.get_logger().error(f"Erreur publication liste trajectoires: {e}")
+    
+    def cb_delete_trajectory(self, msg):
+        """Supprime un fichier de trajectoire"""
+        try:
+            filename = msg.data
+            
+            # Sécurité: vérifier que c'est bien un fichier .json et pas de chemin malveillant
+            if not filename.endswith('.json') or '/' in filename or '\\' in filename or '..' in filename:
+                self.get_logger().warning(f"Tentative de suppression refusée: {filename}")
+                return
+            
+            filepath = os.path.join(self.trajectories_dir, filename)
+            
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                self.get_logger().info(f"Trajectoire supprimée: {filename}")
+            else:
+                self.get_logger().warning(f"Fichier introuvable: {filename}")
+        except Exception as e:
+            self.get_logger().error(f"Erreur suppression trajectoire: {e}")
 
     def cb_take_photo(self, request, response):
         success, msg = self.capture_mgr.take_photo()

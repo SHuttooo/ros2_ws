@@ -15,6 +15,11 @@ web/index.html
 web/logo-polytech.png
 web/saint-cyr.png
 web/style.css
+web/accueil/CURT.jpg
+web/accueil/bras.jpg
+web/accueil/home.png
+web/accueil/logo.png
+web/accueil/page_presentation.html
 web/navig/blank_area.json
 web/navig/logo.png
 web/navig/map.jpg

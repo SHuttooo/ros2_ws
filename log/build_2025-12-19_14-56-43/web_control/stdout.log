@@ -1,0 +1,31 @@
+running develop
+running egg_info
+writing web_control.egg-info/PKG-INFO
+writing dependency_links to web_control.egg-info/dependency_links.txt
+writing entry points to web_control.egg-info/entry_points.txt
+writing requirements to web_control.egg-info/requires.txt
+writing top-level names to web_control.egg-info/top_level.txt
+reading manifest file 'web_control.egg-info/SOURCES.txt'
+writing manifest file 'web_control.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages/web-control.egg-link (link to .)
+Installing backend_node script to /home/matthieu/ros2_ws/install/web_control/lib/web_control
+
+Installed /home/matthieu/ros2_ws/build/web_control
+running symlink_data
+symbolically linking /home/matthieu/ros2_ws/build/web_control/resource/web_control -> /home/matthieu/ros2_ws/install/web_control/share/ament_index/resource_index/packages
+symbolically linking /home/matthieu/ros2_ws/build/web_control/package.xml -> /home/matthieu/ros2_ws/install/web_control/share/web_control
+symbolically linking /home/matthieu/ros2_ws/build/web_control/launch/web_control_full.launch.py -> /home/matthieu/ros2_ws/install/web_control/share/web_control/launch
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/saint-cyr.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/logo-polytech.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/style.css -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/index.html -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/app.js -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/logo.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/navig.css -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/map.jpg -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/navig.js -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/settings.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/navig.html -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/blank_area.json -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+creating /home/matthieu/ros2_ws/install/web_control/share/web_control/web/accueil

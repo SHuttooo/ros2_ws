@@ -11,13 +11,17 @@
 <body>
 
     <header>
-        <h1>🎮 Robot serre</h1>
-        <div class="header">
+        <nav style="display: flex; gap: 5px; align-items: center; padding-right: 20px; width: 300px;">
+            <a href="accueil/page_presentation.html" class="nav-btn">📋 Présentation projet</a>
+        </nav>
+        <div class="header" style="flex: 1; display: flex; justify-content: center;">
             <a href="index.html">
                 <img src="logo-polytech.png" alt="Logo Polytech" class="logo">
             </a>
         </div>
-        <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="display: flex; align-items: center; gap: 15px; width: 300px; justify-content: flex-end;">
+            <div id="battery" class="battery-indicator" title="Charge de la batterie">🔋 ---%</div>
+            <button id="btnDarkMode" onclick="toggleDarkMode()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;" title="Mode sombre">🌙</button>
             <button id="btnSettings" onclick="toggleSettings()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">⚙️</button>
             <div id="status" class="disconnected">Déconnecté</div>
         </div>
@@ -92,26 +96,26 @@
 
         <div class="panel map-panel">
             <h2>
-                <a href="navig/navig.html" target="_blank" style="text-decoration: none; color: inherit; cursor: pointer;">
-                    🗺️ Navigation 🔗
+                <a href="navig/navig.html" target="_blank" class="nav-link-button">
+                    🗺️ Navigation
                 </a>
             </h2>
             
-            <div class="map-area custom-map-bg" id="mapArea" onclick="handleMapClick(event)" style="background-image:url('saint-cyr.png'); background-size:cover; background-position:center; background-repeat:no-repeat; position: relative;">
+            <div class="map-area custom-map-bg" id="mapArea" style="position: relative; background-image:url('saint-cyr.png'); background-size:contain; background-repeat:no-repeat; background-position:center;">
                 <svg id="trajectoryLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
-                    <polyline id="displayPath" fill="none" stroke="cyan" stroke-width="4" stroke-opacity="0.8" />
+                    <polyline id="displayPath" fill="none" stroke="cyan" stroke-width="3" stroke-opacity="0.9" points="" />
+                    <circle id="startCircle" cx="-10" cy="-10" r="5" fill="lime" stroke="black" />
                 </svg>
-                <div id="clickMarker" style="display:none; position:absolute; color:red; font-weight:bold;">❌</div>
             </div>
             
-            <p id="clickCoords">Sélectionnez un trajet</p>
-
-            <div style="margin-bottom: 10px; display: flex; gap: 5px;">
-                <select id="trajSelect" style="flex-grow: 1; padding: 10px; border-radius: 5px;">
-                    <option value="">Chargement...</option>
+            <div style="margin-top: 10px; display: flex; gap: 5px;">
+                <select id="trajSelect" style="flex-grow: 1; padding: 8px; border-radius: 5px; background: #444; color: white; border: 1px solid #666;">
+                    <option value="">-- Choisir un trajet --</option>
                 </select>
-                <button class="btn-blue" onclick="loadSelectedTrajectory()" style="padding: 10px;">👁️ Voir</button>
+                <button class="btn-blue" onclick="loadSelectedTrajectory()" style="padding: 5px 10px; font-size: 0.8rem;" title="Afficher le trajet sélectionné">👁️</button>
             </div>
+
+            <p id="trajInfo" style="font-size: 0.8rem; color: #c0c0c0; margin: 5px 0;">Aucun trajet chargé</p>
 
             <button id="btnMission" class="mission-btn start" onclick="toggleMission()">🚀 Lancer la mission</button>
             <button id="btnReturnToBase" class="mission-btn start" onclick="returnToBase()">🏠 Revenir à la base</button>

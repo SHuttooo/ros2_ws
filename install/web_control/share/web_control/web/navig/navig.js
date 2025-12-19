@@ -1,3 +1,21 @@
+// --- Cookie utility functions ---
+function setCookie(name, value, days) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+}
+
+function getCookie(name) {
+    const nameEQ = name + '=';
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const mapContainer = document.getElementById('map-container');
@@ -6,23 +24,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const trajectoryPath = document.getElementById('trajectory-path');
     const gpsCoordsDisplay = document.getElementById('gps-coords');
     const pointList = document.getElementById('point-list');
-    const sendTrajectoryBtn = document.getElementById('send-trajectory');
     const clearTrajectoryBtn = document.getElementById('clear-trajectory');
     const removeLastPointBtn = document.getElementById('remove-last-point');
     const toggleEditModeBtn = document.getElementById('toggle-edit-mode');
     const clearForbiddenAreasBtn = document.getElementById('clear-forbidden-areas');
     const resetForbiddenAreasBtn = document.getElementById('reset-forbidden-areas');
-    const downloadDataBtn = document.getElementById('download-data');
+    const saveTrajectoryBtn = document.getElementById('save-trajectory');
     const trajectoryButtons = document.getElementById('trajectory-buttons');
     const editButtons = document.getElementById('edit-buttons');
     const savedTrajectoriesList = document.getElementById('saved-trajectories-list');
     const zoomInBtn = document.getElementById('zoom-in');
     const zoomOutBtn = document.getElementById('zoom-out');
-    const settingsBtn = document.getElementById('settings-btn');
-    const settingsMenu = document.getElementById('settings-menu');
-    const fontSizeSlider = document.getElementById('font-size-slider');
-    const fontSizeLabel = document.getElementById('font-size-label');
     const darkModeToggle = document.getElementById('dark-mode-toggle');
+    const headerSettingsBtn = document.getElementById('header-settings-btn');
+    const headerFontSizeSlider = document.getElementById('header-font-size-slider');
+    const headerFontSizeLabel = document.getElementById('header-font-size-label');
+    const headerToggleEditModeBtn = document.getElementById('header-toggle-edit-mode');
+    const headerClearForbiddenAreasBtn = document.getElementById('header-clear-forbidden-areas');
+    const headerResetForbiddenAreasBtn = document.getElementById('header-reset-forbidden-areas');
+    const headerEditButtons = document.getElementById('header-edit-buttons');
 
     // --- ROS Connection ---
     const ros = new ROSLIB.Ros({
@@ -37,6 +57,37 @@ document.addEventListener('DOMContentLoaded', () => {
         ros: ros,
         name: '/web_trajectory',
         messageType: 'geometry_msgs/PoseArray'
+    });
+    
+    // Topic pour sauvegarder les trajectoires
+    const saveTrajectoryPub = new ROSLIB.Topic({
+        ros: ros,
+        name: '/ui/save_trajectory',
+        messageType: 'std_msgs/String'
+    });
+    
+    // Topic pour supprimer une trajectoire
+    const deleteTrajectoryPub = new ROSLIB.Topic({
+        ros: ros,
+        name: '/ui/delete_trajectory',
+        messageType: 'std_msgs/String'
+    });
+    
+    // Topic pour recevoir la liste des trajectoires
+    const trajListSub = new ROSLIB.Topic({
+        ros: ros,
+        name: '/ui/trajectory_files',
+        messageType: 'std_msgs/String'
+    });
+    
+    // S'abonner à la liste des trajectoires
+    trajListSub.subscribe((msg) => {
+        try {
+            const files = JSON.parse(msg.data);
+            updateSavedTrajectoriesList(files);
+        } catch (e) {
+            console.error('Erreur parsing liste trajectoires:', e);
+        }
     });
 
     // --- State ---
@@ -81,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateTransform();
         loadForbiddenAreas();
-        loadSavedTrajectories();
+        // La liste des trajectoires sera chargée via ROS topic
     };
 
 
@@ -305,23 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Trajectory Management ---
-    sendTrajectoryBtn.addEventListener('click', () => {
-        if (trajectoryPoints.length === 0) {
-            alert('Le trajet est vide.');
-            return;
-        }
-        const poseArray = new ROSLIB.Message({
-            header: { stamp: new Date().toISOString(), frame_id: 'map' },
-            poses: trajectoryPoints.map(p => ({
-                position: { x: p.gps.lon, y: p.gps.lat, z: 0 },
-                orientation: { x: 0, y: 0, z: 0, w: 1 }
-            }))
-        });
-        trajectoryTopic.publish(poseArray);
-        console.log('Trajet envoyé:', poseArray);
-        alert('Trajet envoyé à ROS !');
-    });
-
     clearTrajectoryBtn.addEventListener('click', () => {
         trajectoryPoints = [];
         pointList.innerHTML = '';
@@ -370,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editMode = !editMode;
         toggleEditModeBtn.textContent = editMode ? 'Mode Édition: ON' : 'Mode Édition: OFF';
         toggleEditModeBtn.classList.toggle('active', editMode);
+        toggleEditModeBtn.style.backgroundColor = editMode ? '#28a745' : '#dc3545';
         
         // Toggle visibility of button groups
         trajectoryButtons.style.display = editMode ? 'none' : 'block';
@@ -395,8 +430,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBlankAreas();
     });
 
-    downloadDataBtn.addEventListener('click', () => {
-        downloadAllData();
+    saveTrajectoryBtn.addEventListener('click', () => {
+        saveTrajectory();
     });
 
     // --- UI Update Functions ---
@@ -488,9 +523,32 @@ document.addEventListener('DOMContentLoaded', () => {
         mapWorld.appendChild(rect);
     }
 
-    function downloadAllData() {
-        // Create a single JSON file with all data
+    function saveTrajectory() {
+        // Récupérer le nom de la trajectoire
+        const nameInput = document.getElementById('trajectory-name');
+        let trajName = nameInput ? nameInput.value.trim() : '';
+        
+        if (!trajName) {
+            alert('⚠️ Veuillez entrer un nom pour la trajectoire');
+            return;
+        }
+        
+        // Nettoyer le nom (enlever les caractères spéciaux)
+        trajName = trajName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        
+        // Créer les données de trajectoire
+        const imgWidth = mapImage.naturalWidth;
+        const imgHeight = mapImage.naturalHeight;
+        
         const data = {
+            meta: {
+                name: trajName,
+                timestamp: new Date().toISOString(),
+                mapDimensions: {
+                    width: imgWidth,
+                    height: imgHeight
+                }
+            },
             startPoint: {
                 pixel: { x: startPoint.x, y: startPoint.y },
                 gps: startPoint.gps
@@ -514,17 +572,112 @@ document.addEventListener('DOMContentLoaded', () => {
             }))
         };
         
-        // Create and download JSON file
-        const jsonContent = JSON.stringify(data, null, 2);
-        const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        link.download = `user_models/navigation_data_${timestamp}.json`;
-        link.click();
-        URL.revokeObjectURL(link.href);
+        // Publier via ROS pour sauvegarde sur le serveur
+        const jsonString = JSON.stringify(data);
+        const msg = new ROSLIB.Message({
+            data: jsonString
+        });
         
-        console.log('Données téléchargées dans user_models/');
+        saveTrajectoryPub.publish(msg);
+        console.log('Trajectoire envoyée pour sauvegarde via ROS');
+        alert(`✅ Trajectoire "${trajName}" sauvegardée !`);
+        
+        // Vider le champ de saisie
+        if (nameInput) nameInput.value = '';
+    }
+
+    function updateSavedTrajectoriesList(files) {
+        savedTrajectoriesList.innerHTML = '';
+        
+        if (!files || files.length === 0) {
+            const li = document.createElement('li');
+            li.textContent = 'Aucun trajet sauvegardé';
+            li.style.fontStyle = 'italic';
+            li.style.color = '#999';
+            savedTrajectoriesList.appendChild(li);
+            return;
+        }
+
+        files.forEach(filename => {
+            const li = document.createElement('li');
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = filename.replace('.json', '');
+            
+            const actions = document.createElement('div');
+            actions.className = 'trajectory-actions';
+            
+            const loadBtn = document.createElement('button');
+            loadBtn.textContent = 'Charger';
+            loadBtn.className = 'btn-load';
+            loadBtn.onclick = () => loadTrajectoryFromFile(filename);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '🗑️';
+            deleteBtn.className = 'btn-delete';
+            deleteBtn.onclick = () => deleteTrajectoryFile(filename);
+            
+            actions.appendChild(loadBtn);
+            actions.appendChild(deleteBtn);
+            
+            li.appendChild(nameSpan);
+            li.appendChild(actions);
+            savedTrajectoriesList.appendChild(li);
+        });
+    }
+
+    function loadTrajectoryFromFile(filename) {
+        fetch(`../trajectories/${filename}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Fichier non trouvé');
+                return response.json();
+            })
+            .then(data => {
+                // Clear current trajectory
+                trajectoryPoints = [];
+                pointList.innerHTML = '';
+                const markers = mapWorld.querySelectorAll('.map-marker:not(.start)');
+                markers.forEach(marker => marker.remove());
+                
+                // Load trajectory
+                pointIdCounter = 0;
+                if (data.trajectory && Array.isArray(data.trajectory)) {
+                    data.trajectory.forEach(point => {
+                        const newPoint = {
+                            id: pointIdCounter++,
+                            x: point.pixel.x,
+                            y: point.pixel.y,
+                            gps: point.gps,
+                            type: point.type || 'normal',
+                            photography: point.photography || 'no'
+                        };
+                        trajectoryPoints.push(newPoint);
+                        addPointToVisualList(newPoint);
+                        drawPointOnMap(newPoint);
+                    });
+                }
+                
+                // Update trajectory line
+                updateTrajectoryPath();
+                
+                const trajName = data.meta && data.meta.name ? data.meta.name : filename.replace('.json', '');
+                alert(`✅ Trajet "${trajName}" chargé (${trajectoryPoints.length} points)!`);
+            })
+            .catch(err => {
+                console.error('Erreur chargement trajectoire:', err);
+                alert('❌ Erreur lors du chargement du trajet');
+            });
+    }
+
+    function deleteTrajectoryFile(filename) {
+        if (!confirm(`Supprimer le trajet "${filename.replace('.json', '')}" ?`)) return;
+        
+        // Publier via ROS pour suppression
+        const msg = new ROSLIB.Message({
+            data: filename
+        });
+        
+        deleteTrajectoryPub.publish(msg);
+        console.log('Demande de suppression envoyée:', filename);
     }
 
     function loadForbiddenAreas() {
@@ -616,188 +769,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- Cookie Management ---
-    window.saveTrajectoryToCookies = function() {
-        if (trajectoryPoints.length === 0) {
-            alert('Aucun point dans le trajet.');
-            return;
-        }
-
-        const name = prompt('Nom du trajet:');
-        if (!name) return;
-
-        const trajectoryData = {
-            name: name,
-            timestamp: new Date().toISOString(),
-            startPoint: startPoint,
-            points: trajectoryPoints
-        };
-
-        // Get existing trajectories
-        let savedTrajectories = [];
-        const cookieData = getCookie('savedTrajectories');
-        if (cookieData) {
-            try {
-                savedTrajectories = JSON.parse(cookieData);
-            } catch (e) {
-                console.error('Error parsing saved trajectories:', e);
-            }
-        }
-
-        // Add new trajectory
-        savedTrajectories.push(trajectoryData);
-
-        // Save to cookie (max 4KB per cookie)
-        setCookie('savedTrajectories', JSON.stringify(savedTrajectories), 365);
-        
-        alert('Trajet sauvegardé!');
-        loadSavedTrajectories();
-    };
-
-    function loadSavedTrajectories() {
-        savedTrajectoriesList.innerHTML = '';
-        
-        const cookieData = getCookie('savedTrajectories');
-        if (!cookieData) return;
-
-        try {
-            const savedTrajectories = JSON.parse(cookieData);
-            savedTrajectories.forEach((traj, index) => {
-                const li = document.createElement('li');
-                const nameSpan = document.createElement('span');
-                nameSpan.textContent = `${traj.name} (${traj.points.length} pts)`;
-                
-                const actions = document.createElement('div');
-                actions.className = 'trajectory-actions';
-                
-                const loadBtn = document.createElement('button');
-                loadBtn.textContent = 'Charger';
-                loadBtn.className = 'btn-load';
-                loadBtn.onclick = () => loadTrajectory(index);
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = '🗑️';
-                deleteBtn.className = 'btn-delete';
-                deleteBtn.onclick = () => deleteTrajectory(index);
-                
-                actions.appendChild(loadBtn);
-                actions.appendChild(deleteBtn);
-                
-                li.appendChild(nameSpan);
-                li.appendChild(actions);
-                savedTrajectoriesList.appendChild(li);
-            });
-        } catch (e) {
-            console.error('Error loading saved trajectories:', e);
-        }
-    }
-
-    function loadTrajectory(index) {
-        const cookieData = getCookie('savedTrajectories');
-        if (!cookieData) return;
-
-        try {
-            const savedTrajectories = JSON.parse(cookieData);
-            const traj = savedTrajectories[index];
-            
-            // Clear current trajectory
-            trajectoryPoints = [];
-            pointList.innerHTML = '';
-            const markers = mapWorld.querySelectorAll('.map-marker:not(.start)');
-            markers.forEach(marker => marker.remove());
-            
-            // Load trajectory
-            pointIdCounter = 0;
-            traj.points.forEach(point => {
-                const newPoint = { ...point, id: pointIdCounter++ };
-                trajectoryPoints.push(newPoint);
-                addPointToVisualList(newPoint);
-                drawPointOnMap(newPoint);
-            });
-            
-            alert(`Trajet "${traj.name}" chargé!`);
-        } catch (e) {
-            console.error('Error loading trajectory:', e);
-        }
-    }
-
-    function deleteTrajectory(index) {
-        if (!confirm('Supprimer ce trajet?')) return;
-        
-        const cookieData = getCookie('savedTrajectories');
-        if (!cookieData) return;
-
-        try {
-            const savedTrajectories = JSON.parse(cookieData);
-            savedTrajectories.splice(index, 1);
-            setCookie('savedTrajectories', JSON.stringify(savedTrajectories), 365);
-            loadSavedTrajectories();
-        } catch (e) {
-            console.error('Error deleting trajectory:', e);
-        }
-    }
-
-    function setCookie(name, value, days) {
-        const expires = new Date();
-        expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-        document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
-    }
-
-    function getCookie(name) {
-        const nameEQ = name + '=';
-        const ca = document.cookie.split(';');
-        for (let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-        }
-        return null;
-    }
-
-    // --- Settings Menu ---
-    settingsBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none';
-    });
-
-    // Close settings menu when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
-            settingsMenu.style.display = 'none';
-        }
-    });
-
-    // Font size slider
+    // Font size slider - sync with header slider
     const fontSizes = ['small', 'medium', 'large'];
     const fontSizeLabels = ['Petit', 'Moyen', 'Grand'];
     
-    fontSizeSlider.addEventListener('input', () => {
-        const value = parseInt(fontSizeSlider.value);
-        const size = fontSizes[value - 1];
-        
-        // Remove all font classes
-        document.body.classList.remove('font-small', 'font-medium', 'font-large');
-        
-        // Add selected class
-        document.body.classList.add(`font-${size}`);
-        
-        // Update label
-        fontSizeLabel.textContent = fontSizeLabels[value - 1];
-        
-        // Save preference
-        setCookie('fontSize', size, 365);
-    });
+    if (headerFontSizeSlider) {
+        headerFontSizeSlider.addEventListener('input', () => {
+            const value = parseInt(headerFontSizeSlider.value);
+            const size = fontSizes[value - 1];
+            
+            // Remove all font classes
+            document.body.classList.remove('font-small', 'font-medium', 'font-large');
+            
+            // Add selected class
+            document.body.classList.add(`font-${size}`);
+            
+            // Update labels
+            headerFontSizeLabel.textContent = fontSizeLabels[value - 1];
+            
+            // Save preference
+            setCookie('fontSize', size, 365);
+        });
+    }
 
     // Dark mode toggle
-    darkModeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        const isDarkMode = document.body.classList.contains('dark-mode');
-        darkModeToggle.textContent = isDarkMode ? 'ON' : 'OFF';
-        darkModeToggle.classList.toggle('active', isDarkMode);
-        
-        // Save preference
-        setCookie('darkMode', isDarkMode ? 'on' : 'off', 365);
-    });
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            darkModeToggle.textContent = isDarkMode ? '☀️' : '🌙';
+            
+            // Save preference
+            setCookie('darkMode', isDarkMode ? 'on' : 'off', 365);
+        });
+    }
 
     // Load saved font size preference
     const savedFontSize = getCookie('fontSize');
@@ -805,21 +810,120 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add(`font-${savedFontSize}`);
         const sizeIndex = fontSizes.indexOf(savedFontSize);
         if (sizeIndex !== -1) {
-            fontSizeSlider.value = sizeIndex + 1;
-            fontSizeLabel.textContent = fontSizeLabels[sizeIndex];
+            if (headerFontSizeSlider) headerFontSizeSlider.value = sizeIndex + 1;
+            if (headerFontSizeLabel) headerFontSizeLabel.textContent = fontSizeLabels[sizeIndex];
         }
     } else {
         // Default to medium
         document.body.classList.add('font-medium');
-        fontSizeSlider.value = 2;
-        fontSizeLabel.textContent = 'Moyen';
+        if (headerFontSizeSlider) headerFontSizeSlider.value = 2;
+        if (headerFontSizeLabel) headerFontSizeLabel.textContent = 'Moyen';
     }
 
     // Load saved dark mode preference
     const savedDarkMode = getCookie('darkMode');
     if (savedDarkMode === 'on') {
         document.body.classList.add('dark-mode');
-        darkModeToggle.textContent = 'ON';
-        darkModeToggle.classList.add('active');
+        if (darkModeToggle) darkModeToggle.textContent = '☀️';
+    }
+
+    clearForbiddenAreasBtn.addEventListener('click', () => {
+        if (confirm('Voulez-vous vraiment effacer toutes les zones interdites ?')) {
+            forbiddenAreas = [];
+            const rects = mapWorld.querySelectorAll('.forbidden-area');
+            rects.forEach(r => r.remove());
+        }
+    });
+
+    resetForbiddenAreasBtn.addEventListener('click', () => {
+        loadBlankAreas();
+    });
+
+    // Header settings button - make it rotate
+    if (headerSettingsBtn) {
+        headerSettingsBtn.addEventListener('mouseover', () => {
+            headerSettingsBtn.style.transform = 'rotate(180deg)';
+        });
+        headerSettingsBtn.addEventListener('mouseout', () => {
+            headerSettingsBtn.style.transform = 'rotate(0deg)';
+        });
+    }
+
+    // Header toggle edit mode - sync with main button
+    if (headerToggleEditModeBtn) {
+        headerToggleEditModeBtn.addEventListener('click', () => {
+            toggleEditModeBtn.click();
+        });
+    }
+
+    // Header clear forbidden areas - sync with main button
+    if (headerClearForbiddenAreasBtn) {
+        headerClearForbiddenAreasBtn.addEventListener('click', () => {
+            clearForbiddenAreasBtn.click();
+        });
+    }
+
+    // Header reset forbidden areas - sync with main button
+    if (headerResetForbiddenAreasBtn) {
+        headerResetForbiddenAreasBtn.addEventListener('click', () => {
+            resetForbiddenAreasBtn.click();
+        });
+    }
+
+    // Update header buttons when main toggleEditModeBtn changes
+    const originalToggleEditModeClick = toggleEditModeBtn.onclick;
+    const updateHeaderEditMode = () => {
+        if (headerToggleEditModeBtn) {
+            headerToggleEditModeBtn.textContent = toggleEditModeBtn.textContent;
+            headerToggleEditModeBtn.style.backgroundColor = toggleEditModeBtn.style.backgroundColor;
+            headerEditButtons.style.display = editButtons.style.display;
+        }
+    };
+    
+    // Observe changes to editButtons visibility
+    const observer = new MutationObserver(updateHeaderEditMode);
+    observer.observe(editButtons, { attributes: true, attributeFilter: ['style'] });
+});
+
+// =======================================================================
+// FONCTIONS GLOBALES
+// =======================================================================
+
+function toggleHeaderSettings() {
+    const modal = document.getElementById('header-settings-modal');
+    if (modal) {
+        modal.style.display = (modal.style.display === 'block') ? 'none' : 'block';
+    }
+}
+
+// Fermer la modale quand on clique en dehors
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('header-settings-modal');
+    if (modal && e.target === modal) {
+        modal.style.display = 'none';
+    }
+});
+
+// Charger les préférences au démarrage
+window.addEventListener('load', () => {
+    const fontSizeSlider = document.getElementById('header-font-size-slider');
+    const fontSizeLabels = ['Petit', 'Moyen', 'Grand'];
+    const fontSizes = ['small', 'medium', 'large'];
+    
+    const savedFontSize = getCookie('fontSize');
+    if (savedFontSize && fontSizeSlider) {
+        const sizeIndex = fontSizes.indexOf(savedFontSize);
+        if (sizeIndex !== -1) {
+            fontSizeSlider.value = sizeIndex + 1;
+        }
+    }
+    
+    const darkMode = getCookie('darkMode');
+    if (darkMode === 'on') {
+        document.body.classList.add('dark-mode');
+        const btn = document.getElementById('dark-mode-toggle');
+        if (btn) {
+            btn.textContent = '☀️';
+        }
     }
 });

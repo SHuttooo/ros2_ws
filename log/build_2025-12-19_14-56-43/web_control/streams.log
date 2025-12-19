@@ -1,0 +1,34 @@
+[0.698s] Invoking command in '/home/matthieu/ros2_ws/build/web_control': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/matthieu/ros2_ws/build/web_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/matthieu/ros2_ws/build/web_control/build --no-deps symlink_data --force
+[0.954s] running develop
+[1.117s] running egg_info
+[1.132s] writing web_control.egg-info/PKG-INFO
+[1.132s] writing dependency_links to web_control.egg-info/dependency_links.txt
+[1.132s] writing entry points to web_control.egg-info/entry_points.txt
+[1.132s] writing requirements to web_control.egg-info/requires.txt
+[1.132s] writing top-level names to web_control.egg-info/top_level.txt
+[1.162s] reading manifest file 'web_control.egg-info/SOURCES.txt'
+[1.163s] writing manifest file 'web_control.egg-info/SOURCES.txt'
+[1.180s] running build_ext
+[1.180s] Creating /home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages/web-control.egg-link (link to .)
+[1.180s] Installing backend_node script to /home/matthieu/ros2_ws/install/web_control/lib/web_control
+[1.180s] 
+[1.180s] Installed /home/matthieu/ros2_ws/build/web_control
+[1.180s] running symlink_data
+[1.180s] symbolically linking /home/matthieu/ros2_ws/build/web_control/resource/web_control -> /home/matthieu/ros2_ws/install/web_control/share/ament_index/resource_index/packages
+[1.181s] symbolically linking /home/matthieu/ros2_ws/build/web_control/package.xml -> /home/matthieu/ros2_ws/install/web_control/share/web_control
+[1.181s] symbolically linking /home/matthieu/ros2_ws/build/web_control/launch/web_control_full.launch.py -> /home/matthieu/ros2_ws/install/web_control/share/web_control/launch
+[1.181s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/saint-cyr.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+[1.181s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/logo-polytech.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+[1.181s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/style.css -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+[1.181s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/index.html -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+[1.181s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/app.js -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+[1.181s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/logo.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+[1.181s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/navig.css -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+[1.182s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/map.jpg -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+[1.182s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/navig.js -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+[1.182s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/settings.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+[1.182s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/navig.html -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+[1.182s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/navig/blank_area.json -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+[1.182s] creating /home/matthieu/ros2_ws/install/web_control/share/web_control/web/accueil
+[1.182s] error: [Errno 2] No such file or directory: '/home/matthieu/ros2_ws/install/web_control/share/web_control/web/accueil/home.png'
+[1.211s] Invoked command in '/home/matthieu/ros2_ws/build/web_control' returned '1': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/matthieu/ros2_ws/build/web_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/matthieu/ros2_ws/build/web_control/build --no-deps symlink_data --force

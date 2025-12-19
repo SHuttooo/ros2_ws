@@ -1,0 +1,24 @@
+[0.548s] Invoking command in '/home/matthieu/ros2_ws/src/web_control': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/matthieu/ros2_ws/build/web_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/web_control build --build-base /home/matthieu/ros2_ws/build/web_control/build install --record /home/matthieu/ros2_ws/build/web_control/install.log --single-version-externally-managed install_data
+[0.730s] running egg_info
+[0.745s] writing ../../build/web_control/web_control.egg-info/PKG-INFO
+[0.745s] writing dependency_links to ../../build/web_control/web_control.egg-info/dependency_links.txt
+[0.745s] writing entry points to ../../build/web_control/web_control.egg-info/entry_points.txt
+[0.745s] writing requirements to ../../build/web_control/web_control.egg-info/requires.txt
+[0.745s] writing top-level names to ../../build/web_control/web_control.egg-info/top_level.txt
+[0.773s] reading manifest file '../../build/web_control/web_control.egg-info/SOURCES.txt'
+[0.774s] writing manifest file '../../build/web_control/web_control.egg-info/SOURCES.txt'
+[0.774s] running build
+[0.774s] running build_py
+[0.774s] running install
+[0.779s] running install_lib
+[0.793s] running install_data
+[0.793s] copying web/style.css -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+[0.793s] copying web/navig/navig.css -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+[0.793s] copying web/accueil/page_presentation.html -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/accueil
+[0.793s] running install_egg_info
+[0.809s] removing '/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages/web_control-1.0.0-py3.12.egg-info' (and everything under it)
+[0.809s] Copying ../../build/web_control/web_control.egg-info to /home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages/web_control-1.0.0-py3.12.egg-info
+[0.810s] running install_scripts
+[0.901s] Installing backend_node script to /home/matthieu/ros2_ws/install/web_control/lib/web_control
+[0.901s] writing list of installed files to '/home/matthieu/ros2_ws/build/web_control/install.log'
+[0.921s] Invoked command in '/home/matthieu/ros2_ws/src/web_control' returned '0': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/matthieu/ros2_ws/build/web_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/web_control build --build-base /home/matthieu/ros2_ws/build/web_control/build install --record /home/matthieu/ros2_ws/build/web_control/install.log --single-version-externally-managed install_data

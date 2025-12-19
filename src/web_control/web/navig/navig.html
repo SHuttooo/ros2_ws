@@ -7,28 +7,40 @@
     <link rel="stylesheet" href="navig.css">
 </head>
 <body>
+    <header class="nav-header">
+        <nav>
+            <a href="../index.html" class="nav-btn">🏠 Accueil</a>
+            <a href="../accueil/page_presentation.html" class="nav-btn">📋 Présentation projet</a>
+        </nav>
+        <div class="logo-container">
+            <a href="../index.html">
+                <img src="../logo-polytech.png" alt="Logo Polytech" class="logo">
+            </a>
+        </div>
+        <div class="header-right">
+            <button id="header-settings-btn" onclick="toggleHeaderSettings()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; transition: transform 0.5s ease;" title="Paramètres">⚙️</button>
+            <button id="dark-mode-toggle" style="background:none; border:none; font-size:1.5rem; cursor:pointer;" title="Mode sombre">🌙</button>
+        </div>
+    </header>
+    
+    <!-- Modal des paramètres du header -->
+    <div id="header-settings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleHeaderSettings()">&times;</span>
+            <h2>⚙️ Paramètres avancés</h2>
+            <div class="setting-row">
+                <label for="header-font-size-slider">Taille de police:</label>
+                <input type="range" id="header-font-size-slider" min="1" max="3" value="2" step="1">
+                <span id="header-font-size-label">Moyen</span>
+            </div>
+        </div>
+    </div>
+    
     <div id="container">
         <div id="map-container">
             <div class="zoom-controls">
                 <button id="zoom-in">+</button>
                 <button id="zoom-out">-</button>
-            </div>
-            <div class="settings-container">
-                <button id="settings-btn" class="settings-button">
-                    <img src="settings.png" alt="Paramètres">
-                </button>
-                <div id="settings-menu" class="settings-menu" style="display: none;">
-                    <h3>Paramètres</h3>
-                    <div class="setting-row">
-                        <label for="font-size-slider">Taille de police:</label>
-                        <input type="range" id="font-size-slider" min="1" max="3" value="2" step="1">
-                        <span id="font-size-label">Moyen</span>
-                    </div>
-                    <div class="setting-row">
-                        <label for="dark-mode-toggle">Mode sombre:</label>
-                        <button id="dark-mode-toggle" class="toggle-button">OFF</button>
-                    </div>
-                </div>
             </div>
             <div id="map-world">
                 <svg id="trajectory-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
@@ -48,7 +60,6 @@
                 <div class="collapsible-section">
                     <div class="section-header" onclick="toggleSection('point-list-section')">
                         <span>▼ Trajet actuel</span>
-                        <button id="save-trajectory" class="btn-save" onclick="event.stopPropagation(); saveTrajectoryToCookies()">💾</button>
                     </div>
                     <div id="point-list-section" class="section-content">
                         <ul id="point-list">
@@ -72,10 +83,13 @@
             <div id="action-buttons-container">
                 <div id="trajectory-buttons">
                     <div class="button-row">
-                        <button id="send-trajectory" class="btn-yellow btn-half">Envoyer le trajet</button>
                         <button id="clear-trajectory" class="btn-red btn-half">Effacer le trajet</button>
                     </div>
                     <button id="remove-last-point">Supprimer le dernier point</button>
+                    <div style="margin-top: 10px;">
+                        <input type="text" id="trajectory-name" placeholder="Nom de la trajectoire" style="width: 100%; padding: 10px 15px; margin-bottom: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; font-size: 1em;">
+                        <button id="save-trajectory" class="btn-yellow" style="width: 100%;">💾 Sauvegarder</button>
+                    </div>
                 </div>
                 
                 <div id="edit-buttons" style="display:none;">
@@ -85,9 +99,6 @@
             </div>
             
             <button id="toggle-edit-mode" class="btn-edit">Mode Édition: OFF</button>
-            
-            <button id="download-data" class="btn-download">📥 Télécharger les données</button>
-            <a href="../index.html" class="back-button">Retour à l'accueil</a>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>

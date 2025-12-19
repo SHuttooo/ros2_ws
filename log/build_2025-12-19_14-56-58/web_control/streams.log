@@ -1,0 +1,22 @@
+[0.654s] Invoking command in '/home/matthieu/ros2_ws/build/web_control': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/matthieu/ros2_ws/build/web_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/matthieu/ros2_ws/build/web_control/build --no-deps symlink_data
+[0.887s] running develop
+[1.033s] running egg_info
+[1.047s] writing web_control.egg-info/PKG-INFO
+[1.048s] writing dependency_links to web_control.egg-info/dependency_links.txt
+[1.048s] writing entry points to web_control.egg-info/entry_points.txt
+[1.048s] writing requirements to web_control.egg-info/requires.txt
+[1.048s] writing top-level names to web_control.egg-info/top_level.txt
+[1.077s] reading manifest file 'web_control.egg-info/SOURCES.txt'
+[1.078s] writing manifest file 'web_control.egg-info/SOURCES.txt'
+[1.093s] running build_ext
+[1.093s] Creating /home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages/web-control.egg-link (link to .)
+[1.094s] Installing backend_node script to /home/matthieu/ros2_ws/install/web_control/lib/web_control
+[1.094s] 
+[1.094s] Installed /home/matthieu/ros2_ws/build/web_control
+[1.094s] running symlink_data
+[1.094s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/accueil/home.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/accueil
+[1.094s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/accueil/logo.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/accueil
+[1.095s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/accueil/CURT.jpg -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/accueil
+[1.095s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/accueil/bras.jpg -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/accueil
+[1.095s] symbolically linking /home/matthieu/ros2_ws/build/web_control/web/accueil/page_presentation.html -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/accueil
+[1.124s] Invoked command in '/home/matthieu/ros2_ws/build/web_control' returned '0': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/matthieu/ros2_ws/build/web_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/matthieu/ros2_ws/build/web_control/build --no-deps symlink_data
