@@ -37,12 +37,13 @@ copying package.xml -> /home/matthieu/ros2_ws/install/web_control/share/web_cont
 creating /home/matthieu/ros2_ws/install/web_control/share/web_control/launch
 copying launch/web_control_full.launch.py -> /home/matthieu/ros2_ws/install/web_control/share/web_control/launch
 creating /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+copying web/saint-cyr.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
+copying web/logo-polytech.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
 copying web/style.css -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
 copying web/index.html -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
 copying web/app.js -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web
-creating /home/matthieu/ros2_ws/install/web_control/share/web_control/web/gallery
-running install_egg_info
-Copying ../../build/web_control/web_control.egg-info to /home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages/web_control-1.0.0-py3.12.egg-info
-running install_scripts
-Installing backend_node script to /home/matthieu/ros2_ws/install/web_control/lib/web_control
-writing list of installed files to '/home/matthieu/ros2_ws/build/web_control/install.log'
+creating /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+copying web/navig/logo.png -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+copying web/navig/navig.css -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+copying web/navig/map.jpg -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+error: can't copy 'web/navig/users_models': doesn't exist or not a regular file

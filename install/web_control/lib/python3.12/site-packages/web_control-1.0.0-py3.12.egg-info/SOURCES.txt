@@ -12,7 +12,16 @@ launch/web_control_full.launch.py
 resource/web_control
 web/app.js
 web/index.html
+web/logo-polytech.png
+web/saint-cyr.png
 web/style.css
+web/navig/blank_area.json
+web/navig/logo.png
+web/navig/map.jpg
+web/navig/navig.css
+web/navig/navig.html
+web/navig/navig.js
+web/navig/settings.png
 web_control/__init__.py
 web_control/backend_node.py
 web_control/capture_manager.py
