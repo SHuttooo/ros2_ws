@@ -11,4 +11,10 @@ running build_py
 running install
 running install_lib
 running install_data
-error: can't copy 'web/navig/users_models': doesn't exist or not a regular file
+copying web/navig/navig.js -> /home/matthieu/ros2_ws/install/web_control/share/web_control/web/navig
+running install_egg_info
+removing '/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages/web_control-1.0.0-py3.12.egg-info' (and everything under it)
+Copying ../../build/web_control/web_control.egg-info to /home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages/web_control-1.0.0-py3.12.egg-info
+running install_scripts
+Installing backend_node script to /home/matthieu/ros2_ws/install/web_control/lib/web_control
+writing list of installed files to '/home/matthieu/ros2_ws/build/web_control/install.log'

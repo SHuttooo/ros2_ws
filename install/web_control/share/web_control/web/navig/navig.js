@@ -520,11 +520,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        link.download = `navigation_data_${timestamp}.json`;
+        link.download = `user_models/navigation_data_${timestamp}.json`;
         link.click();
         URL.revokeObjectURL(link.href);
         
-        console.log('Données téléchargées');
+        console.log('Données téléchargées dans user_models/');
     }
 
     function loadForbiddenAreas() {
@@ -823,4 +823,3 @@ document.addEventListener('DOMContentLoaded', () => {
         darkModeToggle.classList.add('active');
     }
 });
-

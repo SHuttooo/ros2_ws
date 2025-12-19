@@ -97,10 +97,21 @@
                 </a>
             </h2>
             
-            <div class="map-area custom-map-bg" id="mapArea" onclick="handleMapClick(event)" style="background-image:url('saint-cyr.png'); background-size:cover; background-position:center; background-repeat:no-repeat;">
+            <div class="map-area custom-map-bg" id="mapArea" onclick="handleMapClick(event)" style="background-image:url('saint-cyr.png'); background-size:cover; background-position:center; background-repeat:no-repeat; position: relative;">
+                <svg id="trajectoryLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                    <polyline id="displayPath" fill="none" stroke="cyan" stroke-width="4" stroke-opacity="0.8" />
+                </svg>
                 <div id="clickMarker" style="display:none; position:absolute; color:red; font-weight:bold;">❌</div>
             </div>
-            <p id="clickCoords">x: 0, y: 0</p>
+            
+            <p id="clickCoords">Sélectionnez un trajet</p>
+
+            <div style="margin-bottom: 10px; display: flex; gap: 5px;">
+                <select id="trajSelect" style="flex-grow: 1; padding: 10px; border-radius: 5px;">
+                    <option value="">Chargement...</option>
+                </select>
+                <button class="btn-blue" onclick="loadSelectedTrajectory()" style="padding: 10px;">👁️ Voir</button>
+            </div>
 
             <button id="btnMission" class="mission-btn start" onclick="toggleMission()">🚀 Lancer la mission</button>
             <button id="btnReturnToBase" class="mission-btn start" onclick="returnToBase()">🏠 Revenir à la base</button>
