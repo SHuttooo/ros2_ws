@@ -76,7 +76,15 @@ trajListSub.subscribe((msg) => {
 });
 
 const gallerySub = new ROSLIB.Topic({ ros: ros, name: '/ui/gallery_files', messageType: 'std_msgs/String' });
-gallerySub.subscribe((msg) => { try { updateGallery(JSON.parse(msg.data)); } catch (e) {} });
+let lastGalleryData = "";
+gallerySub.subscribe((msg) => { 
+    try { 
+        if (msg.data !== lastGalleryData) {
+            lastGalleryData = msg.data;
+            updateGallery(JSON.parse(msg.data)); 
+        }
+    } catch (e) {} 
+});
 
 // Topic pour recevoir le niveau de batterie
 const batterySub = new ROSLIB.Topic({ 
@@ -113,6 +121,7 @@ let robotSpeed = 0.5;
 function updateSpeed(val) {
     robotSpeed = parseInt(val) / 100.0;
     document.getElementById('speedVal').innerText = val + '%';
+    localStorage.setItem('robotSpeed', val);
 }
 
 // --- ROBOT (ZQSD) ---
@@ -187,11 +196,45 @@ document.addEventListener('keyup', (event) => {
 // =======================================================================
 
 function updateZoom(val) {
+    const elem = document.getElementById('zoomVal');
+    const elemModal = document.getElementById('zoomValModal');
+    if (elem) elem.innerText = val + '%';
+    if (elemModal) elemModal.innerText = val + '%';
+    localStorage.setItem('zoomValue', val);
     zoomPub.publish(new ROSLIB.Message({ data: parseFloat(val) }));
 }
 
 function updateArm(val) {
+    const elem = document.getElementById('armVal');
+    const elemModal = document.getElementById('armValModal');
+    if (elem) elem.innerText = val + '%';
+    if (elemModal) elemModal.innerText = val + '%';
+    localStorage.setItem('armHeight', val);
     armPub.publish(new ROSLIB.Message({ data: parseFloat(val) }));
+}
+
+// Gestion Lampe et Micro
+let lampActive = false;
+let micActive = false;
+
+function toggleLamp() {
+    const btn = document.getElementById('btnLamp');
+    lampActive = !lampActive;
+    if (lampActive) {
+        btn.classList.add('active');
+    } else {
+        btn.classList.remove('active');
+    }
+}
+
+function toggleMic() {
+    const btn = document.getElementById('btnMic');
+    micActive = !micActive;
+    if (micActive) {
+        btn.classList.add('active');
+    } else {
+        btn.classList.remove('active');
+    }
 }
 
 // Gestion Mission
@@ -242,26 +285,75 @@ function updateGallery(files) {
         const isVideo = file.toLowerCase().endsWith('.mp4') || file.toLowerCase().endsWith('.avi') || file.toLowerCase().endsWith('.mov');
 
         if (isVideo) {
-            // Créer un élément vidéo avec miniature
+            // Créer un élément vidéo avec miniature (même style que gallery.html)
             let video = document.createElement('video');
             video.src = 'gallery/' + file;
             video.controls = false;
             video.muted = true;
             video.preload = "metadata";
+            video.playsInline = true;
             video.style.width = "100%";
             video.style.height = "100%";
             video.style.objectFit = "cover";
-            video.onclick = () => window.open(video.src); // Ouvrir en grand au clic
+            video.onclick = () => window.location.href = 'galerie/gallery.html'; // Rediriger vers gallery
 
-            // Icône play overlay
+            // Fallback poster (triangle play)
+            if (!window.__videoFallbackPoster) {
+                const c = document.createElement('canvas');
+                c.width = 320; c.height = 180;
+                const cx = c.getContext('2d');
+                cx.fillStyle = '#0f1419';
+                cx.fillRect(0, 0, c.width, c.height);
+                cx.fillStyle = '#4da3d8';
+                cx.beginPath();
+                cx.moveTo(c.width * 0.4, c.height * 0.3);
+                cx.lineTo(c.width * 0.7, c.height * 0.5);
+                cx.lineTo(c.width * 0.4, c.height * 0.7);
+                cx.closePath();
+                cx.fill();
+                window.__videoFallbackPoster = c.toDataURL('image/png');
+            }
+            video.setAttribute('poster', window.__videoFallbackPoster);
+
+            // Générer miniature depuis première frame
+            const buildPoster = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth || 320;
+                    canvas.height = video.videoHeight || 180;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    video.setAttribute('poster', canvas.toDataURL('image/jpeg'));
+                    video.pause();
+                } catch (err) {
+                    video.setAttribute('poster', window.__videoFallbackPoster);
+                }
+            };
+
+            video.addEventListener('loadedmetadata', () => {
+                video.currentTime = Math.min(0.1, video.duration || 0.1);
+            }, { once: true });
+
+            video.addEventListener('seeked', () => {
+                buildPoster();
+            }, { once: true });
+
+            video.addEventListener('error', () => {
+                video.setAttribute('poster', window.__videoFallbackPoster);
+            }, { once: true });
+
+            // Icône play overlay (style gallery.html)
             let playIcon = document.createElement('div');
-            playIcon.innerHTML = '▶️';
+            playIcon.innerHTML = '▶';
             playIcon.style.position = 'absolute';
             playIcon.style.top = '50%';
             playIcon.style.left = '50%';
             playIcon.style.transform = 'translate(-50%, -50%)';
-            playIcon.style.fontSize = '2rem';
+            playIcon.style.fontSize = '3rem';
+            playIcon.style.color = 'white';
+            playIcon.style.textShadow = '0 0 10px rgba(0,0,0,0.7)';
             playIcon.style.pointerEvents = 'none';
+            playIcon.style.opacity = '0.8';
 
             div.appendChild(video);
             div.appendChild(playIcon);
@@ -269,7 +361,7 @@ function updateGallery(files) {
             // Image
             let img = document.createElement('img');
             img.src = 'gallery/' + file;
-            img.onclick = () => window.open(img.src); // Ouvrir en grand au clic
+            img.onclick = () => window.location.href = 'galerie/gallery.html'; // Rediriger vers gallery
             div.appendChild(img);
         }
 
@@ -414,6 +506,40 @@ window.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('dark-mode');
         const btn = document.getElementById('btnDarkMode');
         if (btn) btn.textContent = '☀️';
+    }
+
+    // Charger les valeurs sauvegardées des curseurs
+    const savedSpeed = localStorage.getItem('robotSpeed');
+    if (savedSpeed !== null) {
+        const speedSlider = document.getElementById('speedSlider');
+        if (speedSlider) {
+            speedSlider.value = savedSpeed;
+            updateSpeed(savedSpeed);
+        }
+    }
+
+    const savedZoom = localStorage.getItem('zoomValue');
+    if (savedZoom !== null) {
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomSliderModal = document.getElementById('zoomSliderModal');
+        if (zoomSlider) zoomSlider.value = savedZoom;
+        if (zoomSliderModal) zoomSliderModal.value = savedZoom;
+        const zoomVal = document.getElementById('zoomVal');
+        const zoomValModal = document.getElementById('zoomValModal');
+        if (zoomVal) zoomVal.innerText = savedZoom + '%';
+        if (zoomValModal) zoomValModal.innerText = savedZoom + '%';
+    }
+
+    const savedArm = localStorage.getItem('armHeight');
+    if (savedArm !== null) {
+        const armSlider = document.getElementById('armSlider');
+        const armSliderModal = document.getElementById('armSliderModal');
+        if (armSlider) armSlider.value = savedArm;
+        if (armSliderModal) armSliderModal.value = savedArm;
+        const armVal = document.getElementById('armVal');
+        const armValModal = document.getElementById('armValModal');
+        if (armVal) armVal.innerText = savedArm + '%';
+        if (armValModal) armValModal.innerText = savedArm + '%';
     }
 });
 

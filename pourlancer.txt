@@ -1,0 +1,11 @@
+ros2 run rmw_zenoh_cpp rmw_zenohd
+
+ros2 run image_tools cam2image --ros-args -r image:=/image_raw -p width:=1280 -p height:=720 -p frequency:=30.0
+
+ros2 launch web_control web_control_full.launch.py
+
+cd ~/ros2_ws
+
+colcon build --symlink-install
+
+source install/setup.bash

@@ -289,6 +289,62 @@ button {
     transition: all 0.3s ease;
 }
 
+/* Bouton Toggle (Lampe et Micro) */
+.btn-toggle {
+    background: linear-gradient(to bottom, #2ecc71, #27ae60);
+    padding: 12px 20px;
+    border: 2px solid #27ae60;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    box-shadow: 0 4px 6px rgba(46, 204, 113, 0.3);
+}
+
+.btn-toggle:hover {
+    background: linear-gradient(to bottom, #27ae60, #229954);
+    border-color: #229954;
+    box-shadow: 0 4px 8px rgba(46, 204, 113, 0.5);
+}
+
+.btn-toggle.active {
+    background: linear-gradient(to bottom, #e74c3c, #c0392b);
+    border-color: #c0392b;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
+
+.btn-toggle.active:hover {
+    background: linear-gradient(to bottom, #c0392b, #a93226);
+    border-color: #a93226;
+    box-shadow: 0 0 12px rgba(231, 76, 60, 0.7);
+}
+
+body.dark-mode .btn-toggle {
+    background: linear-gradient(to bottom, #27ae60, #1e8449);
+    border-color: #1e8449;
+    box-shadow: 0 4px 6px rgba(46, 204, 113, 0.3);
+}
+
+body.dark-mode .btn-toggle:hover {
+    background: linear-gradient(to bottom, #1e8449, #186a3b);
+    border-color: #186a3b;
+    box-shadow: 0 4px 8px rgba(46, 204, 113, 0.5);
+}
+
+body.dark-mode .btn-toggle.active {
+    background: linear-gradient(to bottom, #c0392b, #922b21);
+    border-color: #922b21;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
+
+body.dark-mode .btn-toggle.active:hover {
+    background: linear-gradient(to bottom, #922b21, #78281f);
+    border-color: #78281f;
+    box-shadow: 0 0 12px rgba(231, 76, 60, 0.7);
+}
+
 /* Conteneur des actions */
 .actions { 
     display: grid; /* J'ai supprimé 'display: flex' qui était en conflit */

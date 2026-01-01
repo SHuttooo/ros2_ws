@@ -85,12 +85,17 @@
             </div>
 
             <div class="slider-group">
-                <label>🔍 Zoom Optique</label>
+                <label>🔍 Zoom Optique <span id="zoomVal">0%</span></label>
                 <input type="range" min="0" max="100" value="0" id="zoomSlider" oninput="updateZoom(this.value)">
             </div>
             <div class="slider-group">
-                <label>🦾 Hauteur Bras</label>
+                <label>🦾 Hauteur Bras <span id="armVal">0%</span></label>
                 <input type="range" min="0" max="100" value="0" id="armSlider" oninput="updateArm(this.value)">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn-toggle" id="btnLamp" onclick="toggleLamp()" style="flex: 1;">💡 Lampe</button>
+                <button class="btn-toggle" id="btnMic" onclick="toggleMic()" style="flex: 1;">🎙️ Micro</button>
             </div>
         </div>
 
@@ -122,9 +127,13 @@
         </div>
 
         <div class="panel gallery-panel">
-            <h2>🖼️ Galerie</h2>
+            <h2>
+                <a href="galerie/gallery.html" class="nav-link-button" style="text-decoration:none; color:inherit;">
+                    🖼️ Galerie
+                </a>
+            </h2>
             <div id="galleryGrid" class="gallery-grid">
-                </div>
+            </div>
         </div>
         
     </div>
@@ -140,12 +149,12 @@
             </div>
         
             <div class="slider-group">
-                <label>🔍 Zoom Optique</label>
-                <input type="range" min="0" max="100" value="0" id="zoomSlider" oninput="updateZoom(this.value)">
+                <label>🔍 Zoom Optique <span id="zoomValModal">0%</span></label>
+                <input type="range" min="0" max="100" value="0" id="zoomSliderModal" oninput="updateZoom(this.value)">
             </div>
             <div class="slider-group">
-                <label>🦾 Hauteur Bras</label>
-                <input type="range" min="0" max="100" value="0" id="armSlider" oninput="updateArm(this.value)">
+                <label>🦾 Hauteur Bras <span id="armValModal">0%</span></label>
+                <input type="range" min="0" max="100" value="0" id="armSliderModal" oninput="updateArm(this.value)">
             </div>
             
             <hr style="border:0; border-top:1px solid #444; margin:15px 0;">

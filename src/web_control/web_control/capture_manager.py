@@ -45,13 +45,21 @@ class CaptureManager:
         if self.latest_image is None:
             return False, "Pas d'image pour initier la vidéo"
             
-        filename = f"video_{datetime.now().strftime('%Y%m%d_%H%M%S')}.avi"
+        filename = f"video_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
         path = os.path.join(self.gallery_path, filename)
         
         height, width, _ = self.latest_image.shape
-        # Codec MJPG
-        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        self.video_writer = cv2.VideoWriter(path, fourcc, 20.0, (width, height))
+        
+        # --- CORRECTION ICI ---
+        # On remplace 'mp4v' par 'avc1' (H.264) pour que Chrome puisse lire la vidéo
+        try:
+            fourcc = cv2.VideoWriter_fourcc(*'avc1')
+        except:
+            # Fallback si avc1 n'est pas dispo sur ton Linux
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
+            
+        self.video_writer = cv2.VideoWriter(path, fourcc, 10.0, (width, height))
+        # ----------------------
         
         self.recording = True
         self.node.get_logger().info(f"Début enregistrement: {path}")

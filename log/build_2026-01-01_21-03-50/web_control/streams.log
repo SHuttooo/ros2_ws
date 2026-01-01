@@ -1,0 +1,17 @@
+[0.544s] Invoking command in '/home/matthieu/ros2_ws/build/web_control': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/matthieu/ros2_ws/build/web_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/matthieu/ros2_ws/build/web_control/build --no-deps symlink_data
+[0.778s] running develop
+[0.915s] running egg_info
+[0.928s] writing web_control.egg-info/PKG-INFO
+[0.929s] writing dependency_links to web_control.egg-info/dependency_links.txt
+[0.929s] writing entry points to web_control.egg-info/entry_points.txt
+[0.929s] writing requirements to web_control.egg-info/requires.txt
+[0.929s] writing top-level names to web_control.egg-info/top_level.txt
+[0.956s] reading manifest file 'web_control.egg-info/SOURCES.txt'
+[0.957s] writing manifest file 'web_control.egg-info/SOURCES.txt'
+[0.973s] running build_ext
+[0.973s] Creating /home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages/web-control.egg-link (link to .)
+[0.974s] Installing backend_node script to /home/matthieu/ros2_ws/install/web_control/lib/web_control
+[0.974s] 
+[0.974s] Installed /home/matthieu/ros2_ws/build/web_control
+[0.974s] running symlink_data
+[0.993s] Invoked command in '/home/matthieu/ros2_ws/build/web_control' returned '0': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/matthieu/ros2_ws/build/web_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/matthieu/ros2_ws/build/web_control/build --no-deps symlink_data
