@@ -8,19 +8,19 @@ Plateforme complète de pilotage à distance pour **AGRI-BOT**, un robot agricol
 
 ## 📋 Table des matières
 
-1. [À propos du projet](#à-propos-du-projet)
-2. [Cahier des Charges & Spécifications](#cahier-des-charges--spécifications)
-3. [Architecture système](#architecture-système)
-4. [Installation](#installation)
-5. [Configuration](#configuration)
-6. [Lancement](#lancement)
-7. [Guide d'utilisation](#guide-dutilisation)
-8. [Pages et fonctionnalités](#pages-et-fonctionnalités)
-9. [API & Topics ROS2](#api--topics-ros2)
-10. [Scénarios d'Utilisation](#scénarios-dutilisation-prévus)
-11. [Démarrage Rapide](#démarrage-rapide-checklist)
-12. [Troubleshooting](#troubleshooting)
-13. [Structure du projet](#structure-du-projet)
+1. [À propos du projet](#-à-propos-du-projet)
+2. [Cahier des Charges & Spécifications](#-cahier-des-charges--spécifications)
+3. [Architecture système](#-architecture-système)
+4. [Installation](#-installation)
+5. [Configuration](#️-configuration)
+6. [Lancement](#-lancement)
+7. [Guide d'utilisation](#-guide-dutilisation)
+8. [Pages et fonctionnalités](#-pages-et-fonctionnalités)
+9. [API & Topics ROS2](#-api--topics-ros2)
+10. [Scénarios d'Utilisation](#-scénarios-dutilisation)
+11. [Démarrage Rapide](#-démarrage-rapide)
+12. [Troubleshooting](#-troubleshooting)
+13. [Structure du projet](#-structure-du-projet)
 
 ---
 
