@@ -10,7 +10,7 @@ Plateforme complète de pilotage à distance pour **AGRI-BOT**, un robot agricol
 
 1. [À propos du projet](#-à-propos-du-projet)
 2. [Cahier des Charges & Spécifications](#-cahier-des-charges--spécifications)
-3. [Architecture système](#-architecture-système)
+3. [Architecture système](#️-architecture-système)
 4. [Installation](#-installation)
 5. [Configuration](#️-configuration)
 6. [Lancement](#-lancement)
