@@ -1,0 +1,17 @@
+[0.650s] Invoking command in '/home/matthieu/ros2_ws/build/web_control': CONDA_PROMPT_MODIFIER=(base) DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/matthieu/ros2_ws/build/web_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/matthieu/ros2_ws/build/web_control/build --no-deps symlink_data
+[0.863s] running develop
+[1.002s] running egg_info
+[1.015s] writing web_control.egg-info/PKG-INFO
+[1.015s] writing dependency_links to web_control.egg-info/dependency_links.txt
+[1.015s] writing entry points to web_control.egg-info/entry_points.txt
+[1.015s] writing requirements to web_control.egg-info/requires.txt
+[1.015s] writing top-level names to web_control.egg-info/top_level.txt
+[1.042s] reading manifest file 'web_control.egg-info/SOURCES.txt'
+[1.042s] writing manifest file 'web_control.egg-info/SOURCES.txt'
+[1.056s] running build_ext
+[1.056s] Creating /home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages/web-control.egg-link (link to .)
+[1.056s] Installing backend_node script to /home/matthieu/ros2_ws/install/web_control/lib/web_control
+[1.056s] 
+[1.057s] Installed /home/matthieu/ros2_ws/build/web_control
+[1.057s] running symlink_data
+[1.074s] Invoked command in '/home/matthieu/ros2_ws/build/web_control' returned '0': CONDA_PROMPT_MODIFIER=(base) DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/matthieu/ros2_ws/build/web_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/matthieu/ros2_ws/install/web_control/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/matthieu/ros2_ws/build/web_control/build --no-deps symlink_data

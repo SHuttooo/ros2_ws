@@ -21,6 +21,8 @@ web/navig/navig.css
 web/navig/navig.html
 web/navig/navig.js
 web/navig/settings.png
+web/terminal/terminal.html
+web/terminal/terminal.js
 web_control/__init__.py
 web_control/backend_node.py
 web_control/capture_manager.py

@@ -10,7 +10,7 @@ from datetime import datetime
 from ament_index_python.packages import get_package_share_directory
 from std_srvs.srv import Trigger
 from geometry_msgs.msg import Point # <--- Changement ici (Twist -> Point)
-from std_msgs.msg import String     # <--- Pour la suppression
+from std_msgs.msg import String, Bool     # <--- Pour la suppression et arrêt d'urgence
 
 # Modules internes
 from web_control.capture_manager import CaptureManager
@@ -101,6 +101,9 @@ class WebBackend(Node):
         self.create_subscription(Point, '/robot/cmd_vel_buttons', self.cb_cmd_vel, 10)
         self.create_subscription(Point, '/camera/ptz', self.cb_ptz, 10)
         
+        # Publishers pour le contrôle du robot
+        self.cmd_vel_pub = self.create_publisher(Point, '/robot/cmd_vel_buttons', 10)
+        
         # Subscriber pour suppression
         self.create_subscription(String, '/camera/delete_image', self.cb_delete_image, 10)
         
@@ -110,8 +113,14 @@ class WebBackend(Node):
         # Subscriber pour suppression de trajectoire
         self.create_subscription(String, '/ui/delete_trajectory', self.cb_delete_trajectory, 10)
         
+        # Subscriber pour arrêt d'urgence
+        self.create_subscription(Bool, '/robot/emergency_stop', self.cb_emergency_stop, 10)
+        
         # Publisher pour la liste des trajectoires
         self.traj_list_pub = self.create_publisher(String, '/ui/trajectory_files', 10)
+        
+        # Publisher pour les logs système
+        self.logs_pub = self.create_publisher(String, '/ui/system_logs', 10)
         
         # Timer pour publier la liste des trajectoires périodiquement
         self.create_timer(2.0, self.publish_trajectory_list)
@@ -120,7 +129,18 @@ class WebBackend(Node):
         self.server_thread = None
 
         self.get_logger().info(f"Backend prêt. Web Port: {PORT_WEB}")
+        self.publish_log("Backend initialisé", "success")
         self.start_web_server()
+    
+    def publish_log(self, message, level="info"):
+        """Publie un message de log sur le topic /ui/system_logs"""
+        log_data = {
+            "message": message,
+            "level": level
+        }
+        msg = String()
+        msg.data = json.dumps(log_data)
+        self.logs_pub.publish(msg)
 
     def start_web_server(self):
         try:
@@ -129,8 +149,10 @@ class WebBackend(Node):
             self.server_thread = threading.Thread(target=self.httpd.serve_forever)
             self.server_thread.daemon = True
             self.server_thread.start()
+            self.publish_log(f"Serveur web démarré sur le port {PORT_WEB}", "success")
         except OSError as e:
             self.get_logger().error(f"Erreur serveur web: {e}")
+            self.publish_log(f"Erreur serveur web: {e}", "error")
 
     # Callbacks (Juste pour debug ou hardware)
     def cb_cmd_vel(self, msg):
@@ -139,6 +161,31 @@ class WebBackend(Node):
 
     def cb_ptz(self, msg):
         pass
+
+    # Callback arrêt d'urgence
+    def cb_emergency_stop(self, msg):
+        if msg.data:
+            self.get_logger().warn("🛑 ARRÊT D'URGENCE REÇU !")
+            self.publish_log("🛑 ARRÊT D'URGENCE ACTIVÉ !", "error")
+            
+            # Arrête l'enregistrement vidéo si actif
+            if self.capture_mgr.video_writer is not None:
+                self.capture_mgr.stop_video()
+                self.get_logger().info("Enregistrement vidéo arrêté")
+                self.publish_log("Enregistrement vidéo arrêté", "warn")
+            
+            # Publie un arrêt complet sur le topic de commande du robot
+            stop_msg = Point()
+            stop_msg.x = 0.0  # Vitesse avant/arrière = 0
+            stop_msg.y = 0.0  # Vitesse gauche/droite = 0
+            stop_msg.z = 0.0  # Rotation = 0
+            self.cmd_vel_pub.publish(stop_msg)
+            self.get_logger().info("Commande d'arrêt envoyée au robot")
+            self.publish_log("Robot arrêté", "warn")
+            
+            # Publier plusieurs fois pour s'assurer que le message passe
+            for _ in range(5):
+                self.cmd_vel_pub.publish(stop_msg)
 
     # Logique de suppression
     def cb_delete_image(self, msg):
@@ -152,10 +199,12 @@ class WebBackend(Node):
             try:
                 os.remove(path)
                 self.get_logger().info(f"Fichier supprimé: {filename}")
+                self.publish_log(f"Fichier supprimé: {filename}", "success")
                 # Force la mise à jour de la galerie pour le client
                 self.gallery_mgr.publish_gallery()
             except Exception as e:
                 self.get_logger().error(f"Erreur suppression: {e}")
+                self.publish_log(f"Erreur suppression: {e}", "error")
     
     # Sauvegarde de trajectoire
     def cb_save_trajectory(self, msg):
@@ -188,8 +237,10 @@ class WebBackend(Node):
                 json.dump(traj_data, f, indent=2)
             
             self.get_logger().info(f"Trajectoire sauvegardée: {filename}")
+            self.publish_log(f"Trajectoire sauvegardée: {filename}", "success")
         except Exception as e:
             self.get_logger().error(f"Erreur sauvegarde trajectoire: {e}")
+            self.publish_log(f"Erreur sauvegarde trajectoire: {e}", "error")
     
     def publish_trajectory_list(self):
         """Publie la liste des fichiers de trajectoires disponibles"""
@@ -222,27 +273,41 @@ class WebBackend(Node):
             if os.path.exists(filepath):
                 os.remove(filepath)
                 self.get_logger().info(f"Trajectoire supprimée: {filename}")
+                self.publish_log(f"Trajectoire supprimée: {filename}", "success")
             else:
                 self.get_logger().warning(f"Fichier introuvable: {filename}")
         except Exception as e:
             self.get_logger().error(f"Erreur suppression trajectoire: {e}")
+            self.publish_log(f"Erreur suppression trajectoire: {e}", "error")
 
     def cb_take_photo(self, request, response):
         success, msg = self.capture_mgr.take_photo()
         response.success = success
         response.message = msg
+        if success:
+            self.publish_log(f"Photo capturée: {msg}", "success")
+        else:
+            self.publish_log(f"Erreur photo: {msg}", "error")
         return response
 
     def cb_start_video(self, request, response):
         success, msg = self.capture_mgr.start_video()
         response.success = success
         response.message = msg
+        if success:
+            self.publish_log("Enregistrement vidéo démarré", "success")
+        else:
+            self.publish_log(f"Erreur vidéo: {msg}", "error")
         return response
 
     def cb_stop_video(self, request, response):
         success, msg = self.capture_mgr.stop_video()
         response.success = success
         response.message = msg
+        if success:
+            self.publish_log(f"Vidéo sauvegardée: {msg}", "success")
+        else:
+            self.publish_log(f"Erreur arrêt vidéo: {msg}", "error")
         return response
 
     def stop_server(self):

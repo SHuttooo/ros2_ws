@@ -295,6 +295,14 @@
     </style>
 </head>
 <body>
+<script>
+// Désactiver le défilement avec la molette sur body uniquement
+document.body.addEventListener('wheel', (e) => {
+    if (e.target === document.body || e.target === document.documentElement) {
+        e.preventDefault();
+    }
+}, { passive: false });
+</script>
 
 <header>
     <nav>

@@ -1,15 +1,19 @@
 // =======================================================================
 // 1. CONFIGURATION & CONNEXION
 // =======================================================================
-const robotIp = window.location.hostname;
-const videoHost = robotIp === "" ? "localhost" : robotIp;
+const serverIp = window.location.hostname;  // IP du serveur web
+const robotIp = "192.168.0.132";            // IP du robot/Raspberry
+const videoHost = serverIp === "" ? "localhost" : serverIp;
 
 // Vidéo
 const videoElement = document.getElementById('cameraFeed');
 videoElement.src = `http://${videoHost}:8080/stream?topic=/image_raw&type=mjpeg&quality=100`;
 
-// WebSocket
-const ros = new ROSLIB.Ros({ url: `ws://${videoHost}:9090` });
+// WebSocket 1: Se connecte au serveur local (Zehno) pour galerie/trajets/logs
+const ros = new ROSLIB.Ros({ url: `ws://${window.location.hostname}:9090` });
+
+// WebSocket 2: Se connecte directement à la Raspberry pour /cmd_vel (commandes robot)
+const rosRobot = new ROSLIB.Ros({ url: `ws://${robotIp}:9090` });
 
 ros.on('connection', () => {
     document.getElementById('status').innerText = 'Connecté';
@@ -28,11 +32,11 @@ ros.on('close', () => {
 // 2. TOPICS
 // =======================================================================
 
-// Robot (Point: x, y)
+// Robot (TwistStamped - type imposé par un autre node)
 const cmdVelPub = new ROSLIB.Topic({
-    ros: ros,
-    name: '/robot/cmd_vel_buttons',
-    messageType: 'geometry_msgs/Point' // Changé de Twist à Point
+    ros: rosRobot,  // Utilise la connexion directe à la Raspberry
+    name: '/cmd_vel',
+    messageType: 'geometry_msgs/TwistStamped'
 });
 
 // PTZ (Point: x, y)
@@ -60,6 +64,30 @@ const zoomPub = new ROSLIB.Topic({ ros: ros, name: '/camera/zoom', messageType: 
 const armPub = new ROSLIB.Topic({ ros: ros, name: '/robot/arm_height', messageType: 'std_msgs/Float32' });
 const clickPub = new ROSLIB.Topic({ ros: ros, name: '/ui/click', messageType: 'geometry_msgs/Point' });
 
+// Logs UI
+const logPub = new ROSLIB.Topic({
+    ros: ros,
+    name: '/ui/system_logs',
+    messageType: 'std_msgs/String'
+});
+
+function logEvent(message, level = 'info') {
+    try {
+        logPub.publish(new ROSLIB.Message({
+            data: JSON.stringify({ message, level })
+        }));
+    } catch (e) {
+        console.log(message);
+    }
+}
+
+// Topic pour l'arrêt d'urgence
+const emergencyPub = new ROSLIB.Topic({
+    ros: ros,
+    name: '/robot/emergency_stop',
+    messageType: 'std_msgs/Bool'
+});
+
 // Topic pour recevoir la liste des fichiers de trajectoire
 const trajListSub = new ROSLIB.Topic({ 
     ros: ros, 
@@ -79,11 +107,14 @@ const gallerySub = new ROSLIB.Topic({ ros: ros, name: '/ui/gallery_files', messa
 let lastGalleryData = "";
 gallerySub.subscribe((msg) => { 
     try { 
+        console.log("Galerie reçue:", msg.data);  // DEBUG
         if (msg.data !== lastGalleryData) {
             lastGalleryData = msg.data;
             updateGallery(JSON.parse(msg.data)); 
         }
-    } catch (e) {} 
+    } catch (e) { 
+        console.error("Erreur galerie:", e);  // DEBUG
+    } 
 });
 
 // Topic pour recevoir le niveau de batterie
@@ -122,29 +153,36 @@ function updateSpeed(val) {
     robotSpeed = parseInt(val) / 100.0;
     document.getElementById('speedVal').innerText = val + '%';
     localStorage.setItem('robotSpeed', val);
+    logEvent(`Vitesse robot: ${val}%`, 'info');
 }
 
 // --- ROBOT (ZQSD) ---
 function sendCmd(direction) {
     // 🛑 Arrêt automatique de la mission si on bouge le robot manuellement
     if (missionActive && direction !== 'stop') {
-        toggleMission(); // Cela va passer le bouton à "Lancer" et arrêter la mission
+        toggleMission();
         console.log("Mission interrompue par mouvement manuel.");
     }
 
-    // Utilisation de Point (x, y) au lieu de Twist
-    let point = new ROSLIB.Message({
-        x: 0.0,
-        y: 0.0,
-        z: 0.0
+    // TwistStamped: structure avec header + twist
+    let msg = new ROSLIB.Message({
+        header: {
+            stamp: { sec: 0, nanosec: 0 },
+            frame_id: 'base_link'
+        },
+        twist: {
+            linear: { x: 0.0, y: 0.0, z: 0.0 },
+            angular: { x: 0.0, y: 0.0, z: 0.0 }
+        }
     });
 
-    if (direction === 'up')    point.x = 1.0 * robotSpeed;
-    if (direction === 'down')  point.x = -1.0 * robotSpeed;
-    if (direction === 'right') point.y = 1.0 * robotSpeed; // y pour droite
-    if (direction === 'left')  point.y = -1.0 * robotSpeed; // y pour gauche
+    if (direction === 'up')    msg.twist.linear.x = 0.19 * robotSpeed;
+    if (direction === 'down')  msg.twist.linear.x = -0.19 * robotSpeed;
+    if (direction === 'left')  msg.twist.angular.z = 2.80 * 0.93 *  robotSpeed;
+    if (direction === 'right') msg.twist.angular.z = -2.80 * 0.93 * robotSpeed;
 
-    cmdVelPub.publish(point);
+    cmdVelPub.publish(msg);
+    logEvent(`Robot: ${direction}`, 'info');
 }
 
 // --- PTZ (OKLM) ---
@@ -162,15 +200,27 @@ function sendPtz(direction) {
     if (direction === 'left')  point.y = -1.0;
 
     ptzPub.publish(point);
+    logEvent(`Caméra PTZ: ${direction}`, 'info');
 }
 
 // --- CLAVIER ---
 const keyState = {};
+const keyToButton = {};
+
+document.querySelectorAll('.dpad button').forEach((button) => {
+    const hint = button.querySelector('.key-hint');
+    if (!hint) return;
+    const key = hint.textContent.trim().toLowerCase();
+    if (key) keyToButton[key] = button;
+});
 
 document.addEventListener('keydown', (event) => {
     const key = event.key.toLowerCase();
     if (keyState[key]) return;
     keyState[key] = true;
+
+    if (keyToButton[key]) keyToButton[key].classList.add('active-key');
+    if (['z','q','s','d','o','k','l','m'].includes(key)) logEvent(`Clavier: ${key.toUpperCase()}`, 'info');
 
     if (key === 'z') sendCmd('up');
     if (key === 's') sendCmd('down');
@@ -187,6 +237,8 @@ document.addEventListener('keyup', (event) => {
     const key = event.key.toLowerCase();
     keyState[key] = false;
 
+    if (keyToButton[key]) keyToButton[key].classList.remove('active-key');
+
     if (['z','q','s','d'].includes(key)) sendCmd('stop');
     if (['o','k','l','m'].includes(key)) sendPtz('stop');
 });
@@ -202,6 +254,7 @@ function updateZoom(val) {
     if (elemModal) elemModal.innerText = val + '%';
     localStorage.setItem('zoomValue', val);
     zoomPub.publish(new ROSLIB.Message({ data: parseFloat(val) }));
+    logEvent(`Zoom optique: ${val}%`, 'info');
 }
 
 function updateArm(val) {
@@ -211,6 +264,7 @@ function updateArm(val) {
     if (elemModal) elemModal.innerText = val + '%';
     localStorage.setItem('armHeight', val);
     armPub.publish(new ROSLIB.Message({ data: parseFloat(val) }));
+    logEvent(`Hauteur bras: ${val}%`, 'info');
 }
 
 // Gestion Lampe et Micro
@@ -222,8 +276,10 @@ function toggleLamp() {
     lampActive = !lampActive;
     if (lampActive) {
         btn.classList.add('active');
+        logEvent('Lampe: activée', 'success');
     } else {
         btn.classList.remove('active');
+        logEvent('Lampe: désactivée', 'warn');
     }
 }
 
@@ -232,9 +288,41 @@ function toggleMic() {
     micActive = !micActive;
     if (micActive) {
         btn.classList.add('active');
+        logEvent('Micro: activé', 'success');
     } else {
         btn.classList.remove('active');
+        logEvent('Micro: désactivé', 'warn');
     }
+}
+
+// Arrêt d'urgence
+function emergencyStop() {
+    // Publie l'arrêt d'urgence vers ROS2
+    emergencyPub.publish(new ROSLIB.Message({ data: true }));
+    
+    // Arrête tout mouvement du robot
+    sendCmd('stop');
+    sendPtz('stop');
+    
+    // Arrête la mission si active
+    if (missionActive) {
+        toggleMission();
+    }
+    
+    // Arrête l'enregistrement vidéo si actif
+    if (isRecording) {
+        toggleVideo();
+    }
+    
+    // Affiche une alerte visuelle
+    const btn = document.getElementById('btnEmergency');
+    btn.style.animation = 'pulse 0.5s 3';
+    setTimeout(() => {
+        btn.style.animation = '';
+    }, 1500);
+    
+    console.log('ARRÊT D\'URGENCE ACTIVÉ');
+    logEvent('ARRÊT D\'URGENCE ACTIVÉ', 'error');
 }
 
 // Gestion Mission
@@ -247,27 +335,37 @@ function toggleMission() {
         btn.innerText = "🛑 Arrêter la mission";
         btn.className = "mission-btn stop";
         missionPub.publish(new ROSLIB.Message({ data: true }));
+        logEvent('Mission lancée', 'success');
     } else {
         btn.innerText = "🚀 Lancer la mission";
         btn.className = "mission-btn start";
         missionPub.publish(new ROSLIB.Message({ data: false }));
+        logEvent('Mission arrêtée', 'warn');
     }
 }
 
 // Photo & Vidéo
 let isRecording = false;
 function takePhoto() {
-    photoClient.callService(new ROSLIB.ServiceRequest(), (res) => alert(res.success ? "📸 Prise !" : "Erreur"));
+    logEvent('Photo demandée', 'info');
+    photoClient.callService(new ROSLIB.ServiceRequest(), (res) => {
+        alert(res.success ? "📸 Prise !" : "Erreur");
+        logEvent(res.success ? 'Photo prise' : 'Erreur prise photo', res.success ? 'success' : 'error');
+    });
 }
 function toggleVideo() {
     let btn = document.getElementById('btnRecord');
     if (!isRecording) {
+        logEvent('Démarrage enregistrement vidéo', 'info');
         startVideoClient.callService(new ROSLIB.ServiceRequest(), (res) => {
             if(res.success) { isRecording = true; btn.innerText = "⏹ STOP"; btn.style.backgroundColor = "black"; }
+            logEvent(res.success ? 'Enregistrement vidéo démarré' : 'Erreur démarrage vidéo', res.success ? 'success' : 'error');
         });
     } else {
+        logEvent('Arrêt enregistrement vidéo', 'info');
         stopVideoClient.callService(new ROSLIB.ServiceRequest(), (res) => {
             if(res.success) { isRecording = false; btn.innerText = "🔴 REC"; btn.style.backgroundColor = "#e74c3c"; }
+            logEvent(res.success ? 'Enregistrement vidéo arrêté' : 'Erreur arrêt vidéo', res.success ? 'success' : 'error');
         });
     }
 }
@@ -276,6 +374,7 @@ function toggleVideo() {
 function updateGallery(files) {
     const grid = document.getElementById('galleryGrid');
     grid.innerHTML = "";
+    logEvent(`Galerie mise à jour (${files.length} fichiers)`, 'info');
     files.forEach(file => {
         // Conteneur item
         let div = document.createElement('div');
@@ -295,7 +394,10 @@ function updateGallery(files) {
             video.style.width = "100%";
             video.style.height = "100%";
             video.style.objectFit = "cover";
-            video.onclick = () => window.location.href = 'galerie/gallery.html'; // Rediriger vers gallery
+            video.onclick = () => {
+                logEvent('Ouverture galerie (vidéo)', 'info');
+                window.location.href = 'galerie/gallery.html';
+            }; // Rediriger vers gallery
 
             // Fallback poster (triangle play)
             if (!window.__videoFallbackPoster) {
@@ -361,7 +463,10 @@ function updateGallery(files) {
             // Image
             let img = document.createElement('img');
             img.src = 'gallery/' + file;
-            img.onclick = () => window.location.href = 'galerie/gallery.html'; // Rediriger vers gallery
+            img.onclick = () => {
+                logEvent('Ouverture galerie (image)', 'info');
+                window.location.href = 'galerie/gallery.html';
+            }; // Rediriger vers gallery
             div.appendChild(img);
         }
 
@@ -376,6 +481,7 @@ function updateGallery(files) {
             if(confirm("Supprimer " + file + " ?")) {
                 let msg = new ROSLIB.Message({ data: file });
                 deletePub.publish(msg);
+                logEvent(`Suppression demandée: ${file}`, 'warn');
             }
         };
 
@@ -387,12 +493,14 @@ function updateGallery(files) {
 // Ancienne logique de croix rouge désactivée
 function handleMapClick(event) {
     console.log("Clic sur carte (fonctionnalité croix désactivée)");
+    logEvent('Clic sur la carte', 'info');
 }
 
 function toggleFullscreen() {
     const elem = document.getElementById('cameraFeed');
     if (!document.fullscreenElement) elem.requestFullscreen().catch(err => {});
     else document.exitFullscreen();
+    logEvent('Plein écran vidéo basculé', 'info');
 }
 
 // =======================================================================
@@ -418,6 +526,7 @@ function loadSelectedTrajectory() {
     
     if (!filename) {
         if (info) info.innerText = "Aucun trajet sélectionné";
+        logEvent('Trajet non sélectionné', 'warn');
         return;
     }
 
@@ -435,10 +544,12 @@ function loadSelectedTrajectory() {
                 const nbPoints = data.trajectory ? data.trajectory.length : 0;
                 info.innerText = `✅ Trajet chargé : ${nbPoints} points`;
             }
+            logEvent(`Trajet chargé: ${filename}`, 'success');
         })
         .catch(err => {
             console.error("Erreur chargement json:", err);
             if (info) info.innerText = "❌ Erreur lors du chargement";
+            logEvent(`Erreur chargement trajet: ${filename}`, 'error');
         });
 }
 
@@ -482,6 +593,7 @@ function toggleSettings() {
     const modal = document.getElementById('settingsModal');
     // Si c'est affiché (block), on cache (none), sinon on affiche
     modal.style.display = (modal.style.display === 'block') ? 'none' : 'block';
+    logEvent(`Réglages: ${modal.style.display === 'block' ? 'ouverts' : 'fermés'}`, 'info');
 }
 
 // Gestion du mode sombre
@@ -497,6 +609,7 @@ function toggleDarkMode() {
     if (btn) {
         btn.textContent = isDarkMode ? '☀️' : '🌙';
     }
+    logEvent(`Mode sombre: ${isDarkMode ? 'activé' : 'désactivé'}`, 'info');
 }
 
 // Charger la préférence au démarrage
@@ -507,6 +620,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('btnDarkMode');
         if (btn) btn.textContent = '☀️';
     }
+    logEvent('Interface chargée', 'success');
 
     // Charger les valeurs sauvegardées des curseurs
     const savedSpeed = localStorage.getItem('robotSpeed');
@@ -540,6 +654,18 @@ window.addEventListener('DOMContentLoaded', () => {
         const armValModal = document.getElementById('armValModal');
         if (armVal) armVal.innerText = savedArm + '%';
         if (armValModal) armValModal.innerText = savedArm + '%';
+    }
+
+    const navButton = document.querySelector('.nav-link-button');
+    if (navButton) {
+        navButton.addEventListener('click', () => {
+            logEvent('Ouverture page navigation', 'info');
+        });
+    }
+
+    const mapArea = document.getElementById('mapArea');
+    if (mapArea) {
+        mapArea.addEventListener('click', handleMapClick);
     }
 });
 

@@ -9,6 +9,14 @@
     <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
 </head>
 <body>
+<script>
+// Désactiver le défilement avec la molette sur body uniquement
+document.body.addEventListener('wheel', (e) => {
+    if (e.target === document.body || e.target === document.documentElement) {
+        e.preventDefault();
+    }
+}, { passive: false });
+</script>
 
     <header>
         <nav style="display: flex; gap: 5px; align-items: center; padding-right: 20px; width: 300px;">
@@ -20,6 +28,9 @@
             </a>
         </div>
         <div style="display: flex; align-items: center; gap: 15px; width: 300px; justify-content: flex-end;">
+            <a href="terminal/terminal.html" class="btn-terminal-link" title="Terminal des logs">
+                <button style="background:none; border:none; font-size:1.5rem; cursor:pointer;">📟</button>
+            </a>
             <div id="battery" class="battery-indicator" title="Charge de la batterie">🔋 ---%</div>
             <button id="btnDarkMode" onclick="toggleDarkMode()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;" title="Mode sombre">🌙</button>
             <button id="btnSettings" onclick="toggleSettings()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">⚙️</button>
@@ -30,15 +41,18 @@
     <div class="container">
 
         <div class="panel video-panel column1">
-            <h2>🎥 Live Feed</h2>
-            <div class="video-container" onclick="toggleFullscreen()">
-                <img id="cameraFeed" src="" alt="En attente de la caméra...">
+            <div class="video-wrapper">
+                <h2>🎥 Live Feed</h2>
+                <div class="video-container" onclick="toggleFullscreen()">
+                    <img id="cameraFeed" src="" alt="En attente de la caméra...">
+                </div>
+                <p class="hint">Cliquer pour Plein Écran</p>
             </div>
-            <p class="hint">Cliquer pour Plein Écran</p>
-        </div>
-
-        <div class="panel controls-panel column1">
-            <div id ="robotControls">
+            
+            <hr>
+            
+            <div class="controls-panel">
+                <div id ="robotControls">
                 <h2>🕹️ Robot</h2>
                 <div class="dpad">
                     <button onmousedown="sendCmd('up')" onmouseup="sendCmd('stop')" ontouchstart="sendCmd('up')" ontouchend="sendCmd('stop')">⬆️<br><span class="key-hint">Z</span></button>
@@ -64,15 +78,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="panel terminal-panel">
-            <h2>📟 Logs Système</h2>
-            <div id="terminalOutput" class="terminal-content">
-                <div class="log-line">> Initializing system... OK</div>
-                <div class="log-line">> Connecting to camera... OK</div>
-                <div class="log-line">> Battery level: 84%</div>
-                <div class="log-line">> Waiting for input...</div>
             </div>
         </div>
 
@@ -97,6 +102,8 @@
                 <button class="btn-toggle" id="btnLamp" onclick="toggleLamp()" style="flex: 1;">💡 Lampe</button>
                 <button class="btn-toggle" id="btnMic" onclick="toggleMic()" style="flex: 1;">🎙️ Micro</button>
             </div>
+
+            <button class="btn-emergency" id="btnEmergency" onclick="emergencyStop()">🛑 ARRÊT D'URGENCE</button>
         </div>
 
         <div class="panel map-panel">
