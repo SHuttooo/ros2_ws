@@ -166,7 +166,7 @@ header > div:last-child {
 }
 
 .audio-btn {
-    background: rgba(255, 255, 255, 0.15);
+    background: none;
     border: none;
     color: white;
     font-size: 1.1rem;
@@ -176,7 +176,7 @@ header > div:last-child {
 }
 
 .audio-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
+    opacity: 0.8;
 }
 
 .audio-slider {
@@ -448,6 +448,55 @@ body.dark-mode .btn-toggle.active:hover {
     background: linear-gradient(to bottom, #922b21, #78281f);
     border-color: #78281f;
     box-shadow: 0 0 1.2vh rgba(231, 76, 60, 0.7);
+}
+
+/* Autofocus: couleurs inversées (ON = vert, OFF = rouge) */
+#btnAutofocus {
+    background: linear-gradient(to bottom, #e74c3c, #c0392b);
+    border-color: #c0392b;
+    box-shadow: 0 0 1vh rgba(231, 76, 60, 0.5);
+}
+
+#btnAutofocus:hover {
+    background: linear-gradient(to bottom, #c0392b, #a93226);
+    border-color: #a93226;
+    box-shadow: 0 0 1.2vh rgba(231, 76, 60, 0.7);
+}
+
+#btnAutofocus.active {
+    background: linear-gradient(to bottom, #2ecc71, #27ae60);
+    border-color: #27ae60;
+    box-shadow: 0 0.4vh 0.6vh rgba(46, 204, 113, 0.4);
+}
+
+#btnAutofocus.active:hover {
+    background: linear-gradient(to bottom, #27ae60, #229954);
+    border-color: #229954;
+    box-shadow: 0 0.4vh 0.8vh rgba(46, 204, 113, 0.6);
+}
+
+body.dark-mode #btnAutofocus {
+    background: linear-gradient(to bottom, #c0392b, #922b21);
+    border-color: #922b21;
+    box-shadow: 0 0 1vh rgba(231, 76, 60, 0.5);
+}
+
+body.dark-mode #btnAutofocus:hover {
+    background: linear-gradient(to bottom, #922b21, #78281f);
+    border-color: #78281f;
+    box-shadow: 0 0 1.2vh rgba(231, 76, 60, 0.7);
+}
+
+body.dark-mode #btnAutofocus.active {
+    background: linear-gradient(to bottom, #27ae60, #1e8449);
+    border-color: #1e8449;
+    box-shadow: 0 0.4vh 0.6vh rgba(46, 204, 113, 0.4);
+}
+
+body.dark-mode #btnAutofocus.active:hover {
+    background: linear-gradient(to bottom, #1e8449, #186a3b);
+    border-color: #186a3b;
+    box-shadow: 0 0.4vh 0.8vh rgba(46, 204, 113, 0.6);
 }
 
 /* Bouton d'urgence */

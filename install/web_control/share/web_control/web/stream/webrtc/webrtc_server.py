@@ -61,14 +61,17 @@ async def websocket_handler(request):
     player = build_player()
     if player.video:
         pc.addTrack(player.video)
-        print("WebRTC: piste vidéo ajoutée", flush=True)
+        print(f"WebRTC: piste vidéo ajoutée - {player.video}", flush=True)
     else:
         await ws.send_json({"type": "error", "message": "RTSP: pas de piste video"})
         print("WebRTC: pas de piste vidéo", flush=True)
 
     if player.audio:
-        pc.addTrack(player.audio)
-        print("WebRTC: piste audio ajoutée", flush=True)
+        audio_track = player.audio
+        pc.addTrack(audio_track)
+        print(f"WebRTC: piste audio ajoutée - {audio_track}", flush=True)
+        print(f"  Audio codec: {getattr(audio_track, '_codec_name', 'unknown')}", flush=True)
+        print(f"  Audio format: {getattr(audio_track, '_format', 'unknown')}", flush=True)
     else:
         print("WebRTC: pas de piste audio", flush=True)
 

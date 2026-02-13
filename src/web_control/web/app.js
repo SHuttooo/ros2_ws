@@ -49,12 +49,18 @@ function initWebRTC() {
         audioSlider.addEventListener('input', () => {
             const volume = Math.max(0, Math.min(1, Number(audioSlider.value) / 100));
             videoElement.volume = volume;
+            const btn = document.getElementById('btnAudio');
             if (volume > 0 && videoElement.muted) {
                 audioEnabled = true;
                 videoElement.muted = false;
-                const btn = document.getElementById('btnAudio');
                 if (btn) {
                     btn.textContent = '🔊';
+                }
+            } else if (volume === 0) {
+                audioEnabled = false;
+                videoElement.muted = true;
+                if (btn) {
+                    btn.textContent = '🔇';
                 }
             }
         });
@@ -156,7 +162,13 @@ const deletePub = new ROSLIB.Topic({
 });
 
 const zoomPub = new ROSLIB.Topic({ ros: ros, name: '/camera/zoom', messageType: 'std_msgs/Float32' });
-const armPub = new ROSLIB.Topic({ ros: ros, name: '/robot/arm_height', messageType: 'std_msgs/Float32' });
+const focusPub = new ROSLIB.Topic({ ros: ros, name: '/camera/focus', messageType: 'std_msgs/Float32' });
+const autofocusPub = new ROSLIB.Topic({ ros: ros, name: '/camera/autofocus', messageType: 'std_msgs/Bool' });
+const lightPub = new ROSLIB.Topic({ ros: ros, name: '/camera/light', messageType: 'std_msgs/Bool' });
+const alertPub = new ROSLIB.Topic({ ros: ros, name: '/camera/alert', messageType: 'std_msgs/Bool' });
+const robotVolumePub = new ROSLIB.Topic({ ros: ros, name: '/robot/volume', messageType: 'std_msgs/Float32' });
+const armSpeedPub = new ROSLIB.Topic({ ros: ros, name: '/robot/arm_speed', messageType: 'std_msgs/Float32' });
+const armPosPub = new ROSLIB.Topic({ ros: ros, name: '/robot/arm_position', messageType: 'std_msgs/Float32' });
 const clickPub = new ROSLIB.Topic({ ros: ros, name: '/ui/click', messageType: 'geometry_msgs/Point' });
 
 // Logs UI
@@ -352,14 +364,88 @@ function updateZoom(val) {
     logEvent(`Zoom optique: ${val}%`, 'info');
 }
 
-function updateArm(val) {
-    const elem = document.getElementById('armVal');
-    const elemModal = document.getElementById('armValModal');
+function updateFocus(val) {
+    const elemModal = document.getElementById('focusValModal');
+    const focusPos = Math.max(0, Math.min(28, parseInt(val)));
+
+    setAutofocusState(false, { publish: true });
+    if (elemModal) elemModal.innerText = focusPos;
+    logEvent(`Focus manuel: ${focusPos}`, 'info');
+    localStorage.setItem('focusValue', String(focusPos));
+    focusPub.publish(new ROSLIB.Message({ data: focusPos }));
+}
+
+let autofocusEnabled = true;
+
+function setAutofocusState(enabled, options = {}) {
+    autofocusEnabled = enabled;
+    localStorage.setItem('autofocusEnabled', enabled ? '1' : '0');
+
+    const btn = document.getElementById('btnAutofocus');
+    if (btn) {
+        btn.textContent = enabled ? '🎯 Autofocus: ON' : '🎯 Autofocus: OFF';
+        btn.classList.toggle('active', enabled);
+    }
+
+    const focusSliderModal = document.getElementById('focusSliderModal');
+    if (focusSliderModal) {
+        focusSliderModal.disabled = enabled;
+    }
+
+    if (enabled && options.publish) {
+        const focusValModal = document.getElementById('focusValModal');
+        if (focusValModal) focusValModal.innerText = 'Auto';
+        localStorage.setItem('focusValue', '0');
+        autofocusPub.publish(new ROSLIB.Message({ data: true }));
+    } else if (!enabled && options.publish) {
+        autofocusPub.publish(new ROSLIB.Message({ data: false }));
+    }
+}
+
+function toggleAutofocus() {
+    setAutofocusState(!autofocusEnabled, { publish: true });
+}
+
+function updateArmSpeed(val) {
+    const elem = document.getElementById('armSpeedVal');
     if (elem) elem.innerText = val + '%';
-    if (elemModal) elemModal.innerText = val + '%';
-    localStorage.setItem('armHeight', val);
-    armPub.publish(new ROSLIB.Message({ data: parseFloat(val) }));
-    logEvent(`Hauteur bras: ${val}%`, 'info');
+    localStorage.setItem('armSpeed', val);
+    armSpeedPub.publish(new ROSLIB.Message({ data: parseFloat(val) }));
+    logEvent(`Vitesse bras: ${val}%`, 'info');
+}
+
+function updateArmPos(val) {
+    const elem = document.getElementById('armPosVal');
+    if (elem) elem.innerText = val + '%';
+    localStorage.setItem('armPosition', val);
+    armPosPub.publish(new ROSLIB.Message({ data: parseFloat(val) }));
+    logEvent(`Position bras: ${val}%`, 'info');
+}
+
+function updateRobotVolume(val) {
+    const elem = document.getElementById('robotVolumeVal');
+    if (elem) elem.innerText = val + '%';
+    localStorage.setItem('robotVolume', val);
+    robotVolumePub.publish(new ROSLIB.Message({ data: parseFloat(val) }));
+    logEvent(`Volume robot: ${val}%`, 'info');
+}
+
+function triggerAlert() {
+    const btn = document.getElementById('btnAlert');
+    alertPub.publish(new ROSLIB.Message({ data: true }));
+    if (btn) {
+        btn.classList.add('active');
+        btn.textContent = '🚨 Alerte Caméra: TEST';
+    }
+    logEvent('Alerte caméra: TEST', 'warning');
+
+    setTimeout(() => {
+        alertPub.publish(new ROSLIB.Message({ data: false }));
+        if (btn) {
+            btn.classList.remove('active');
+            btn.textContent = '🚨 Alerte Caméra';
+        }
+    }, 1000);
 }
 
 // Gestion Lampe et Micro
@@ -369,12 +455,20 @@ let micActive = false;
 function toggleLamp() {
     const btn = document.getElementById('btnLamp');
     lampActive = !lampActive;
+    
+    console.log('toggleLamp() appelé, lampActive =', lampActive);
+    
+    // Publier sur /camera/light
+    const lightMsg = new ROSLIB.Message({ data: lampActive });
+    lightPub.publish(lightMsg);
+    console.log('Message publié sur /camera/light:', lightMsg);
+    
     if (lampActive) {
         btn.classList.add('active');
-        logEvent('Lampe: activée', 'success');
+        logEvent('💡 Lampe IR: activée', 'success');
     } else {
         btn.classList.remove('active');
-        logEvent('Lampe: désactivée', 'warn');
+        logEvent('💡 Lampe IR: désactivée', 'warn');
     }
 }
 
@@ -819,17 +913,44 @@ window.addEventListener('DOMContentLoaded', () => {
         if (zoomValModal) zoomValModal.innerText = savedZoom + '%';
     }
 
-    const savedArm = localStorage.getItem('armHeight');
-    if (savedArm !== null) {
-        const armSlider = document.getElementById('armSlider');
-        const armSliderModal = document.getElementById('armSliderModal');
-        if (armSlider) armSlider.value = savedArm;
-        if (armSliderModal) armSliderModal.value = savedArm;
-        const armVal = document.getElementById('armVal');
-        const armValModal = document.getElementById('armValModal');
-        if (armVal) armVal.innerText = savedArm + '%';
-        if (armValModal) armValModal.innerText = savedArm + '%';
+    const savedFocus = localStorage.getItem('focusValue') || '0';
+    const focusSliderModal = document.getElementById('focusSliderModal');
+    const normalizedFocus = Math.max(0, Math.min(28, parseInt(savedFocus)) || 0);
+    if (focusSliderModal) focusSliderModal.value = normalizedFocus;
+    const focusValModal = document.getElementById('focusValModal');
+    if (focusValModal) {
+        if (normalizedFocus === 0) {
+            focusValModal.innerText = 'Auto';
+        } else {
+            focusValModal.innerText = normalizedFocus;
+        }
     }
+
+    const savedAutofocus = localStorage.getItem('autofocusEnabled');
+    const autofocusFromStorage = savedAutofocus === null ? (normalizedFocus === 0) : savedAutofocus === '1';
+    setAutofocusState(autofocusFromStorage, { publish: false });
+    if (!autofocusFromStorage && normalizedFocus !== 0) {
+        const focusValModal = document.getElementById('focusValModal');
+        if (focusValModal) focusValModal.innerText = normalizedFocus;
+    }
+
+    const savedArmSpeed = localStorage.getItem('armSpeed') || '50';
+    const armSpeedSlider = document.getElementById('armSpeedSlider');
+    if (armSpeedSlider) armSpeedSlider.value = savedArmSpeed;
+    const armSpeedVal = document.getElementById('armSpeedVal');
+    if (armSpeedVal) armSpeedVal.innerText = savedArmSpeed + '%';
+
+    const savedArmPos = localStorage.getItem('armPosition') || '0';
+    const armPosSlider = document.getElementById('armPosSlider');
+    if (armPosSlider) armPosSlider.value = savedArmPos;
+    const armPosVal = document.getElementById('armPosVal');
+    if (armPosVal) armPosVal.innerText = savedArmPos + '%';
+
+    const savedRobotVolume = localStorage.getItem('robotVolume') || '50';
+    const robotVolumeSlider = document.getElementById('robotVolumeSlider');
+    if (robotVolumeSlider) robotVolumeSlider.value = savedRobotVolume;
+    const robotVolumeVal = document.getElementById('robotVolumeVal');
+    if (robotVolumeVal) robotVolumeVal.innerText = savedRobotVolume + '%';
 
     const navButton = document.querySelector('.nav-link-button');
     if (navButton) {

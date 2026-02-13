@@ -97,10 +97,26 @@ document.body.addEventListener('wheel', (e) => {
                 <label>🔍 Zoom Optique <span id="zoomVal">0%</span></label>
                 <input type="range" min="0" max="100" value="0" id="zoomSlider" oninput="updateZoom(this.value)">
             </div>
+
             <div class="slider-group">
-                <label>🦾 Hauteur Bras <span id="armVal">0%</span></label>
-                <input type="range" min="0" max="100" value="0" id="armSlider" oninput="updateArm(this.value)">
+                <label>⚡ Vitesse Bras <span id="armSpeedVal">50%</span></label>
+                <input type="range" min="0" max="100" value="50" id="armSpeedSlider" oninput="updateArmSpeed(this.value)">
             </div>
+
+            <div class="slider-group">
+                <label>🦾 Position Bras <span id="armPosVal">0%</span></label>
+                <input type="range" min="0" max="100" value="0" id="armPosSlider" oninput="updateArmPos(this.value)">
+            </div>
+
+            <div class="slider-group">
+                <label>🔊 Volume Robot <span id="robotVolumeVal">50%</span></label>
+                <input type="range" min="0" max="100" value="50" id="robotVolumeSlider" oninput="updateRobotVolume(this.value)">
+            </div>
+
+            <div class="slider-group">
+                <button class="btn-toggle" id="btnAlert" onclick="triggerAlert()" style="width: 100%;">🚨 Alerte Caméra</button>
+            </div>
+
 
             <div style="display: flex; gap: 10px; margin-top: 15px;">
                 <button class="btn-toggle" id="btnLamp" onclick="toggleLamp()" style="flex: 1;">💡 Lampe</button>
@@ -155,18 +171,15 @@ document.body.addEventListener('wheel', (e) => {
             <h2>⚙️ Réglages avancés</h2>
             
             <div class="slider-group">
-                <label>🚀 Vitesse Robot <span id="speedVal">50%</span></label>
-                <input type="range" min="0" max="100" value="50" id="speedSlider" oninput="updateSpeed(this.value)">
+                <button class="btn-toggle" id="btnAutofocus" onclick="toggleAutofocus()" style="width: 100%;">🎯 Autofocus: ON</button>
             </div>
-        
+
             <div class="slider-group">
-                <label>🔍 Zoom Optique <span id="zoomValModal">0%</span></label>
-                <input type="range" min="0" max="100" value="0" id="zoomSliderModal" oninput="updateZoom(this.value)">
+                <label>🎯 Focus Manuel <span id="focusValModal">Auto</span></label>
+                <input type="range" min="0" max="28" value="0" id="focusSliderModal" oninput="updateFocus(this.value)">
             </div>
-            <div class="slider-group">
-                <label>🦾 Hauteur Bras <span id="armValModal">0%</span></label>
-                <input type="range" min="0" max="100" value="0" id="armSliderModal" oninput="updateArm(this.value)">
-            </div>
+
+
             
             <hr style="border:0; border-top:1px solid #444; margin:15px 0;">
             
