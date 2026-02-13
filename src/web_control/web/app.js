@@ -5,9 +5,9 @@ const serverIp = window.location.hostname;  // IP du serveur web
 const robotIp = "192.168.0.132";            // IP du robot/Raspberry
 const videoHost = serverIp === "" ? "localhost" : serverIp;
 
-// Vidéo
+// Vidéo - Flux RTSP converti en MJPEG par FFmpeg (basse latence)
 const videoElement = document.getElementById('cameraFeed');
-videoElement.src = `http://${videoHost}:8080/stream?topic=/image_raw&type=mjpeg&quality=100`;
+videoElement.src = 'http://localhost:8090';
 
 // WebSocket 1: Se connecte au serveur local (Zehno) pour galerie/trajets/logs
 const ros = new ROSLIB.Ros({ url: `ws://${window.location.hostname}:9090` });

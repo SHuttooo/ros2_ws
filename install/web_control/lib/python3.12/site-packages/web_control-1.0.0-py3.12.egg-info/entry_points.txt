@@ -1,0 +1,2 @@
+[console_scripts]
+backend_node = web_control.backend_node:main
