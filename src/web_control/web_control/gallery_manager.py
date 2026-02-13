@@ -16,7 +16,7 @@ class GalleryManager:
             return
 
         # Liste des fichiers images/vidéos (jpg/png/avi/mp4)
-        files = [f for f in os.listdir(self.gallery_path) if f.endswith(('.jpg', '.png', '.avi', '.mp4'))]
+        files = [f for f in os.listdir(self.gallery_path) if f.endswith(('.jpg', '.png', '.avi', '.mp4', '.webm'))]
         # Tri par date (plus récent en premier)
         files.sort(key=lambda x: os.path.getmtime(os.path.join(self.gallery_path, x)), reverse=True)
         

@@ -5,9 +5,104 @@ const serverIp = window.location.hostname;  // IP du serveur web
 const robotIp = "192.168.0.132";            // IP du robot/Raspberry
 const videoHost = serverIp === "" ? "localhost" : serverIp;
 
-// Vidéo - Flux RTSP converti en MJPEG par FFmpeg (basse latence)
+// Vidéo WebRTC (faible latence)
 const videoElement = document.getElementById('cameraFeed');
-videoElement.src = 'http://localhost:8090';
+const webrtcStatus = document.getElementById('webrtcStatus');
+
+if (videoElement) {
+    initWebRTC();
+}
+
+function initWebRTC() {
+    const host = window.location.hostname || "localhost";
+    const wsUrl = `ws://${host}:8091/ws`;
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    const ws = new WebSocket(wsUrl);
+
+    let audioEnabled = false;
+    const audioSlider = document.getElementById('audioSlider');
+
+    const setStatus = (text) => {
+        if (webrtcStatus) {
+            webrtcStatus.textContent = text;
+        }
+    };
+
+    window.toggleAudio = () => {
+        audioEnabled = !audioEnabled;
+        videoElement.muted = !audioEnabled;
+        console.log('Audio toggled:', audioEnabled, 'Volume:', videoElement.volume, 'Muted:', videoElement.muted);
+        if (audioEnabled) {
+            videoElement.play().catch(() => {});
+        }
+        const btn = document.getElementById('btnAudio');
+        if (btn) {
+            btn.textContent = audioEnabled ? '🔊' : '🔇';
+        }
+        setStatus(audioEnabled ? 'WebRTC: son activé' : 'WebRTC: son coupé');
+        if (audioSlider) {
+            audioSlider.value = audioEnabled ? Math.round(videoElement.volume * 100) : 0;
+        }
+    };
+
+    if (audioSlider) {
+        audioSlider.addEventListener('input', () => {
+            const volume = Math.max(0, Math.min(1, Number(audioSlider.value) / 100));
+            videoElement.volume = volume;
+            if (volume > 0 && videoElement.muted) {
+                audioEnabled = true;
+                videoElement.muted = false;
+                const btn = document.getElementById('btnAudio');
+                if (btn) {
+                    btn.textContent = '🔊';
+                }
+            }
+        });
+    }
+
+    pc.ontrack = (event) => {
+        console.log('WebRTC track reçue:', event.track.kind, event.streams[0]);
+        if (videoElement.srcObject !== event.streams[0]) {
+            videoElement.srcObject = event.streams[0];
+            const stream = event.streams[0];
+            console.log('Audio tracks:', stream.getAudioTracks().length);
+            console.log('Video tracks:', stream.getVideoTracks().length);
+            videoElement.play().catch(() => {});
+            setStatus('WebRTC: flux reçu');
+        }
+    };
+
+    pc.onconnectionstatechange = () => {
+        setStatus(`WebRTC: ${pc.connectionState}`);
+    };
+
+    pc.oniceconnectionstatechange = () => {
+        setStatus(`ICE: ${pc.iceConnectionState}`);
+    };
+
+    ws.onopen = async () => {
+        setStatus('WebRTC: signalisation...');
+        const offer = await pc.createOffer({
+            offerToReceiveVideo: true,
+            offerToReceiveAudio: true
+        });
+        await pc.setLocalDescription(offer);
+        ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
+    };
+
+    ws.onmessage = async (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'answer') {
+            await pc.setRemoteDescription({ type: 'answer', sdp: data.sdp });
+            setStatus('WebRTC: connecté');
+        } else if (data.type === 'error') {
+            setStatus(`WebRTC: ${data.message}`);
+        }
+    };
+
+    ws.onerror = () => setStatus('WebRTC: erreur WebSocket');
+    ws.onclose = () => setStatus('WebRTC: WebSocket fermé');
+}
 
 // WebSocket 1: Se connecte au serveur local (Zehno) pour galerie/trajets/logs
 const ros = new ROSLIB.Ros({ url: `ws://${window.location.hostname}:9090` });
@@ -346,25 +441,105 @@ function toggleMission() {
 
 // Photo & Vidéo
 let isRecording = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+
+async function uploadBlob(blob, endpoint, filename) {
+    const params = new URLSearchParams({ filename });
+    const res = await fetch(`${endpoint}?${params.toString()}`, {
+        method: 'POST',
+        body: blob
+    });
+    if (!res.ok) {
+        throw new Error(`Upload failed: ${res.status}`);
+    }
+}
+
 function takePhoto() {
-    logEvent('Photo demandée', 'info');
+    if (videoElement && videoElement.srcObject && videoElement.videoWidth) {
+        const canvas = document.createElement('canvas');
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(async (blob) => {
+            if (blob) {
+                const filename = `photo_${Date.now()}.jpg`;
+                try {
+                    await uploadBlob(blob, '/upload_photo', filename);
+                    logEvent('Photo prise (WebRTC)', 'success');
+                } catch (e) {
+                    logEvent('Erreur upload photo (WebRTC)', 'error');
+                }
+            } else {
+                logEvent('Erreur prise photo (WebRTC)', 'error');
+            }
+        }, 'image/jpeg', 0.95);
+        return;
+    }
+
+    logEvent('Photo demandée (ROS2)', 'info');
     photoClient.callService(new ROSLIB.ServiceRequest(), (res) => {
         alert(res.success ? "📸 Prise !" : "Erreur");
         logEvent(res.success ? 'Photo prise' : 'Erreur prise photo', res.success ? 'success' : 'error');
     });
 }
+
 function toggleVideo() {
     let btn = document.getElementById('btnRecord');
+
+    if (videoElement && videoElement.srcObject && window.MediaRecorder) {
+        if (!isRecording) {
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(videoElement.srcObject, { mimeType: 'video/webm;codecs=vp8' });
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                recordedChunks = [];
+                try {
+                    await uploadBlob(blob, '/upload_video', `video_${Date.now()}.webm`);
+                    logEvent('Vidéo sauvegardée (WebRTC)', 'success');
+                } catch (e) {
+                    logEvent('Erreur upload vidéo (WebRTC)', 'error');
+                }
+            };
+            mediaRecorder.start();
+            isRecording = true;
+            btn.innerText = "⏹ STOP";
+            btn.style.backgroundColor = "black";
+            logEvent('Enregistrement vidéo démarré (WebRTC)', 'success');
+        } else {
+            mediaRecorder.stop();
+            isRecording = false;
+            btn.innerText = "🔴 REC";
+            btn.style.backgroundColor = "#e74c3c";
+            logEvent('Enregistrement vidéo arrêté (WebRTC)', 'success');
+        }
+        return;
+    }
+
     if (!isRecording) {
-        logEvent('Démarrage enregistrement vidéo', 'info');
+        logEvent('Démarrage enregistrement vidéo (ROS2)', 'info');
         startVideoClient.callService(new ROSLIB.ServiceRequest(), (res) => {
-            if(res.success) { isRecording = true; btn.innerText = "⏹ STOP"; btn.style.backgroundColor = "black"; }
+            if (res.success) {
+                isRecording = true;
+                btn.innerText = "⏹ STOP";
+                btn.style.backgroundColor = "black";
+            }
             logEvent(res.success ? 'Enregistrement vidéo démarré' : 'Erreur démarrage vidéo', res.success ? 'success' : 'error');
         });
     } else {
-        logEvent('Arrêt enregistrement vidéo', 'info');
+        logEvent('Arrêt enregistrement vidéo (ROS2)', 'info');
         stopVideoClient.callService(new ROSLIB.ServiceRequest(), (res) => {
-            if(res.success) { isRecording = false; btn.innerText = "🔴 REC"; btn.style.backgroundColor = "#e74c3c"; }
+            if (res.success) {
+                isRecording = false;
+                btn.innerText = "🔴 REC";
+                btn.style.backgroundColor = "#e74c3c";
+            }
             logEvent(res.success ? 'Enregistrement vidéo arrêté' : 'Erreur arrêt vidéo', res.success ? 'success' : 'error');
         });
     }
@@ -381,7 +556,7 @@ function updateGallery(files) {
         div.className = "gallery-item";
 
         // Vérifier si c'est une vidéo
-        const isVideo = file.toLowerCase().endsWith('.mp4') || file.toLowerCase().endsWith('.avi') || file.toLowerCase().endsWith('.mov');
+        const isVideo = file.toLowerCase().endsWith('.mp4') || file.toLowerCase().endsWith('.avi') || file.toLowerCase().endsWith('.mov') || file.toLowerCase().endsWith('.webm');
 
         if (isVideo) {
             // Créer un élément vidéo avec miniature (même style que gallery.html)

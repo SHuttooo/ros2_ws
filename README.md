@@ -225,7 +225,7 @@ Le TurtleBot3 **simule temporairement** le Curt Mini en attendant sa livraison. 
 
 ## 🏗️ Architecture système
 
-### Vue d'ensemble simplifiée
+### Vue d'ensemble avec WebRTC
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
@@ -233,47 +233,43 @@ Le TurtleBot3 **simule temporairement** le Curt Mini en attendant sa livraison. 
 │                                                               │
 │  ┌────────────────────────────────────────────────────────┐   │
 │  │ Navigateur Web (http://localhost:8000)                 │   │
-│  │  - app.js: Contrôles, affichage, événements            │   │
-│  │  - style.css: UI responsive en vh                      │   │
-│  │  - index.html: Structure HTML                          │   │
+│  │  - app.js: WebRTC client + contrôles ROS2              │   │
+│  │  - style.css: UI responsive                            │   │
+│  │  - index.html: Structure HTML + video element          │   │
 │  └────────────────────────────────────────────────────────┘   │
-│           │                         │                         │
-│           ▼ WS JSON                 ▼ HTTP                    │
-│  ┌────────────────────┐   ┌──────────────────┐                │
-│  │ rosbridge_websocket│   │ web_video_server │                │
-│  │ Port 9090          │   │ Port 8080        │                │
-│  └────────────────────┘   └──────────────────┘                │
-│           │                         │                         │
-│           ▼ DDS/ROS2                ▼ HTTP                    │
-│  ┌────────────────────────────────────────────┐               │
-│  │      backend_node (port 8000)              │               │
-│  │  - CaptureManager (photos/vidéos)          │               │
-│  │  - GalleryManager (gestion fichiers)       │               │
-│  │  - HTTP server (sert les fichiers)         │               │
-│  └────────────────────────────────────────────┘               │
-│                        │                                      │
-│                        ▼ DDS                                  │
+│           │              │                 │                  │
+│           ▼ WS (9090)    ▼ WS (8091)       ▼ HTTP             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
+│  │ rosbridge    │  │ WebRTC       │  │ backend_node │         │
+│  │ websocket    │  │ Server       │  │ HTTP Server  │         │
+│  │ Port 9090    │  │ Port 8091    │  │ Port 8000    │         │
+│  └──────────────┘  └──────────────┘  └──────────────┘         │
+│        │                  │                  │                │
+│        ▼ ROS2             ▼ RTSP             ▼ File I/O       │
+│  ┌──────────────────────────────────────────────────┐         │
+│  │   ROS2 Topics: /cmd_vel, /battery_state, etc.   │         │
+│  └──────────────────────────────────────────────────┘         │
+│                           │                                   │
+│                           ▼ RTSP/TCP                          │
+│  ┌──────────────────────────────────────────────────┐         │
+│  │  Caméra Reolink (RTSP)                           │         │
+│  │  rtsp://admin:***@100.73.141.53:8554/...        │         │
+│  │  - Vidéo: H.264, 2304x1296, 15fps                │         │
+│  │  - Audio: AAC, 16kHz, mono (si activé)           │         │
+│  └──────────────────────────────────────────────────┘         │
+│                                                               │
 └───────────────────────────────────────────────────────────────┘
                          │
                          │ ROS_DOMAIN_ID=42
+                         │ (via Tailscale VPN ou réseau local)
                          │
 ┌───────────────────────────────────────────────────────────────┐
-│  RASPBERRY PI - Actuellement: TurtleBot3 Burger               │
-│                 À terme: Curt Mini 4×4 avec bras + LiDAR      │
-│  ⚠️  Configuration temporaire de simulation                   │
+│  RASPBERRY PI - TurtleBot3 Burger (Saint-Cyr)                │
 │                                                               │
 │  ┌────────────────────────────────────────────────────────┐   │
-│  │ turtlebot3_bringup/robot.launch.py (temporaire)        │   │
-│  │  - Moteurs (wheelbase controller)                      │   │
-│  │  - Caméra USB (image_raw publisher)                    │   │
-│  │  - Capteurs (odom, imu, etc.)                          │   │
-│  │                                                        │   │
-│  │ ↓ Sera remplacé par curt_mini_bringup ↓                │   │
-│  │  - Base Curt Mini 4×4 (étanche IP68)                   │   │
-│  │  - Bras pantographe (30cm → 1m20)                      │   │
-│  │  - Caméra PTZ sur bras                                 │   │
-│  │  - LiDAR 2D (SLAM)                                     │   │
-│  │  - GPS RTK (extérieur)                                 │   │
+│  │ turtlebot3_bringup/robot.launch.py                     │   │
+│  │  - Moteurs: écoute /cmd_vel                            │   │
+│  │  - Capteurs: publie /odom, /imu, /battery_state        │   │
 │  └────────────────────────────────────────────────────────┘   │
 │                        │                                      │
 │                        ▼                                      │
@@ -283,6 +279,70 @@ Le TurtleBot3 **simule temporairement** le Curt Mini en attendant sa livraison. 
 │  └────────────────────────────────────────────────────────┘   │
 │                                                               │
 └───────────────────────────────────────────────────────────────┘
+```
+
+### Architecture WebRTC détaillée
+
+**Streaming vidéo bas latence** :
+```
+Caméra Reolink
+  ├─ RTSP/TCP → rtsp://100.73.141.53:8554/h264Preview_01_main
+  │   └─ Tunnel socat (si nécessaire)
+  │
+  ▼
+WebRTC Server (Python aiortc)
+  ├─ MediaPlayer: décode flux RTSP
+  │   ├─ Vidéo: H.264 → track vidéo
+  │   └─ Audio: AAC → track audio (si activé)
+  │
+  ├─ WebSocket (port 8091): signalisation WebRTC
+  │   └─ Échange SDP offer/answer avec client
+  │
+  └─ RTC Peer Connection
+      └─ Envoie tracks vidéo/audio au navigateur
+  
+  ▼
+Navigateur (app.js)
+  ├─ WebSocket → ws://localhost:8091/ws
+  │   └─ Négocie connexion WebRTC (SDP)
+  │
+  ├─ RTCPeerConnection
+  │   ├─ Reçoit track vidéo
+  │   └─ Reçoit track audio (optionnel)
+  │
+  ├─ Video Element (<video id="cameraFeed">)
+  │   └─ Affiche le flux en temps réel (~100-200ms latence)
+  │
+  ├─ Canvas API
+  │   └─ Capture screenshots pour photos
+  │
+  └─ MediaRecorder API
+      └─ Enregistre vidéos en WebM
+```
+
+**Capture photo/vidéo** :
+```
+Bouton 📸 Photo
+  ▼
+canvas.drawImage(videoElement)
+  ▼
+canvas.toBlob() → JPEG
+  ▼
+fetch POST /upload_photo
+  ▼
+backend_node sauvegarde → ~/robot_gallery/photo_*.jpg
+
+Bouton 🔴 REC
+  ▼
+MediaRecorder(videoStream, {mimeType: 'video/webm'})
+  ▼
+recordedChunks.push(data)
+  ▼
+Blob → WebM
+  ▼
+fetch POST /upload_video
+  ▼
+backend_node sauvegarde → ~/robot_gallery/video_*.webm
 ```
 
 ### Architecture multi-site détaillée
@@ -473,17 +533,19 @@ Navigateur: Galerie, Trajets, Terminal
 - ROS2 Jazzy
 - Python 3.10+
 - Navigateur Firefox/Chrome
+- FFmpeg (pour WebRTC)
 
 **Sur Raspberry Pi (Saint-Cyr)**
 - Ubuntu Server 22.04 ARM64
 - ROS2 Jazzy
 - TurtleBot3 Burger packages
-- Caméra USB/CSI compatible ROS2
+- Caméra Reolink avec flux RTSP
 
 **Réseau**
-- WiFi 2.4/5 GHz stable
+- WiFi 2.4/5 GHz stable ou Tailscale VPN
 - ROS_DOMAIN_ID=42 sur les deux machines
 - ZENOH configuré pour le pont Jussieu ↔ Saint-Cyr (optionnel, peut utiliser DDS direct si même réseau)
+- Tunnel socat pour RTSP (si caméra sur réseau distant)
 
 ### Étapes
 
@@ -497,26 +559,60 @@ colcon build --packages-select web_control --symlink-install
 source install/setup.bash
 ```
 
-#### 2. Installer les dépendances (Zehno - Jussieu)
+#### 2. Installer les dépendances système (Zehno - Jussieu)
 
 ```bash
 sudo apt update
 sudo apt install -y \
   ros-jazzy-rosbridge-suite \
-  ros-jazzy-web-video-server \
-  python3-opencv
+  python3-opencv \
+  python3-pip \
+  python3-venv \
+  ffmpeg \
+  socat
 ```
 
-#### 3. Installer les dépendances (Raspberry - Saint-Cyr)
+#### 3. Installer les dépendances WebRTC (environnement virtuel Python)
+
+Le serveur WebRTC nécessite `aiortc` qui doit être installé dans un environnement virtuel :
+
+```bash
+cd ~/ros2_ws/src/web_control/web/stream/webrtc
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+deactivate
+```
+
+**Contenu de `requirements.txt`** :
+```
+aiortc==1.6.0
+aiohttp==3.9.5
+av
+opencv-python
+```
+
+#### 4. Installer les dépendances (Raspberry - Saint-Cyr)
 
 ```bash
 sudo apt update
 sudo apt install -y \
   ros-jazzy-turtlebot3 \
   ros-jazzy-turtlebot3-bringup \
-  ros-jazzy-rosbridge-suite \
-  ros-jazzy-usb-cam
+  ros-jazzy-rosbridge-suite
 ```
+
+#### 5. Configurer le tunnel RTSP (si caméra sur réseau distant)
+
+Si la caméra Reolink n'est pas sur le même réseau que le serveur WebRTC, créer un tunnel socat :
+
+```bash
+# Exemple de commande socat (à adapter selon votre configuration)
+sudo socat TCP-LISTEN:8554,fork,reuseaddr TCP:<IP_CAMERA>:8554
+```
+
+Pour un lancement automatique au démarrage, créer un service systemd.
 
 ---
 
@@ -653,101 +749,162 @@ Créés automatiquement par `backend_node.py`:
 
 ## 🚀 Lancement
 
-### Lancement séparé (mode debug/développement)
+### Vue d'ensemble
 
-**Terminal 1 - Zehno (caméra USB)**
-```bash
-source /opt/ros/jazzy/setup.bash
-export RMW_IMPLEMENTATION=rmw_zenoh_cpp
-export ROS_DOMAIN_ID=42
-ros2 run image_tools cam2image --ros-args -r image:=/image_raw -p width:=1280 -p height:=720 -p frequency:=30.0
-```
+Le système nécessite plusieurs composants :
+1. **Serveur WebRTC** (port 8091) - Streaming vidéo bas latence depuis RTSP
+2. **Backend ROS2** (port 8000) - Interface web + capture photo/vidéo + galerie
+3. **Rosbridge** (port 9090) - Communication ROS2 ↔ WebSocket
+4. **Robot TurtleBot3** (sur Raspberry) - Contrôle moteurs et capteurs
+5. **Tunnel RTSP** (optionnel) - Si caméra sur réseau distant
 
-**Terminal 2 - Raspberry (robot)**
+### Lancement complet (mode production)
+
+#### Sur Raspberry Pi (Saint-Cyr)
+
 ```bash
+#!/bin/bash
+# Fichier: ~/start_robot.sh
+
 source /opt/ros/jazzy/setup.bash
 export RMW_IMPLEMENTATION=rmw_zenoh_cpp
 export ROS_DOMAIN_ID=42
 export TURTLEBOT3_MODEL=burger
-ros2 launch turtlebot3_bringup robot.launch.py
+
+# Démarrer le robot TurtleBot3
+ros2 launch turtlebot3_bringup robot.launch.py &
+sleep 3
+
+# Démarrer rosbridge pour communication WebSocket
+ros2 run rosbridge_server rosbridge_websocket --ros-args -p port:=9090
 ```
 
-**Terminal 3 - Raspberry (rosbridge)**
+#### Sur Zehno (Jussieu)
+
+**Terminal 1 - Serveur WebRTC (streaming vidéo)**
 ```bash
-source /opt/ros/jazzy/setup.bash
-export RMW_IMPLEMENTATION=rmw_zenoh_cpp
-export ROS_DOMAIN_ID=42
-ros2 run rosbridge_server rosbridge_websocket
+#!/bin/bash
+# Fichier: ~/start_webrtc.sh
+
+cd ~/ros2_ws/src/web_control/web/stream/webrtc
+
+# Configurer l'URL RTSP de la caméra (si différente)
+export RTSP_URL="rtsp://admin:ros2_2025@100.73.141.53:8554/h264Preview_01_main"
+export RTSP_TRANSPORT="tcp"
+
+# Lancer le serveur WebRTC
+.venv/bin/python webrtc_server.py
 ```
 
-**Terminal 4 - Zehno (ZENOH daemon - optionnel)**
+**Terminal 2 - Backend ROS2 + Interface Web**
 ```bash
-source /opt/ros/jazzy/setup.bash
-export RMW_IMPLEMENTATION=rmw_zenoh_cpp
-ros2 run rmw_zenoh_cpp rmw_zenohd
-```
+#!/bin/bash
+# Fichier: ~/start_backend.sh
 
-**Terminal 5 - Zehno (backend web)**
-```bash
 cd ~/ros2_ws
+source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 export RMW_IMPLEMENTATION=rmw_zenoh_cpp
 export ROS_DOMAIN_ID=42
+
+# Lancer le backend web (interface + galerie + uploads)
 ros2 launch web_control web_control_full.launch.py
 ```
 
-**Terminal 6 - Zehno (rosbridge)**
+**Terminal 3 - Rosbridge local (optionnel si rosbridge sur Raspberry)**
 ```bash
 source /opt/ros/jazzy/setup.bash
 export RMW_IMPLEMENTATION=rmw_zenoh_cpp
 export ROS_DOMAIN_ID=42
-ros2 run rosbridge_server rosbridge_websocket
+
+ros2 run rosbridge_server rosbridge_websocket --ros-args -p port:=9090
 ```
 
-### Lancement intégré (mode production)
-
-**Sur Raspberry**
+**Terminal 4 - Tunnel RTSP (si caméra sur réseau distant)**
 ```bash
-#!/bin/bash
-source /opt/ros/jazzy/setup.bash
-export RMW_IMPLEMENTATION=rmw_zenoh_cpp
-export ROS_DOMAIN_ID=42
-export TURTLEBOT3_MODEL=burger
-
-# Démarrer les services
-ros2 launch turtlebot3_bringup robot.launch.py &
-sleep 3
-ros2 run rosbridge_server rosbridge_websocket
+# Exemple avec socat (à adapter selon votre configuration réseau)
+sudo socat TCP-LISTEN:8554,fork,reuseaddr TCP:<IP_CAMERA_REELLE>:8554
 ```
 
-**Sur Zehno**
+### Lancement séparé (mode debug/développement)
+
+Pour tester chaque composant individuellement :
+
+**1. Test du serveur WebRTC seul**
 ```bash
-#!/bin/bash
-source /opt/ros/jazzy/setup.bash
-export RMW_IMPLEMENTATION=rmw_zenoh_cpp
-export ROS_DOMAIN_ID=42
+cd ~/ros2_ws/src/web_control/web/stream/webrtc
+.venv/bin/python webrtc_server.py
+
+# Puis ouvrir http://localhost:8091 dans le navigateur
+# (page de test WebRTC standalone)
+```
+
+**2. Test du backend seul**
+```bash
 cd ~/ros2_ws
 source install/setup.bash
+export RMW_IMPLEMENTATION=rmw_zenoh_cpp
+export ROS_DOMAIN_ID=42
 
-# Démarrer ZENOH daemon (si multi-site)
-ros2 run rmw_zenoh_cpp rmw_zenohd &
-sleep 2
+python3 -m web_control.backend_node
 
-# Démarrer la caméra
-ros2 run image_tools cam2image --ros-args -r image:=/image_raw -p width:=1280 -p height:=720 -p frequency:=30.0 &
-sleep 2
+# Puis ouvrir http://localhost:8000 dans le navigateur
+```
 
-# Démarrer le backend web
-ros2 launch web_control web_control_full.launch.py &
-sleep 3
+**3. Test du flux RTSP avec ffplay**
+```bash
+# Vérifier que la caméra est accessible
+ffplay -rtsp_transport tcp rtsp://admin:ros2_2025@100.73.141.53:8554/h264Preview_01_main
 
-# Démarrer rosbridge
-ros2 run rosbridge_server rosbridge_websocket
+# Vérifier les détails du flux (codec, résolution, framerate)
+ffprobe -rtsp_transport tcp rtsp://admin:ros2_2025@100.73.141.53:8554/h264Preview_01_main
+```
+
+**4. Test de rosbridge**
+```bash
+source /opt/ros/jazzy/setup.bash
+export RMW_IMPLEMENTATION=rmw_zenoh_cpp
+export ROS_DOMAIN_ID=42
+
+ros2 run rosbridge_server rosbridge_websocket --ros-args -p port:=9090
+
+# Vérifier dans le navigateur : ws://localhost:9090
+```
+
+### Vérification des services
+
+Une fois tout lancé, vérifier que tous les ports sont ouverts :
+
+```bash
+# Vérifier les ports en écoute
+netstat -tlnp | grep -E "8000|8091|9090"
+
+# Devrait afficher :
+# tcp  0  0  0.0.0.0:8000   LISTEN   (backend_node)
+# tcp  0  0  0.0.0.0:8091   LISTEN   (webrtc_server.py)
+# tcp  0  0  0.0.0.0:9090   LISTEN   (rosbridge)
+```
+
+Vérifier les topics ROS2 :
+
+```bash
+source /opt/ros/jazzy/setup.bash
+export RMW_IMPLEMENTATION=rmw_zenoh_cpp
+export ROS_DOMAIN_ID=42
+
+# Lister tous les topics
+ros2 topic list
+
+# Devrait inclure :
+# /cmd_vel (commandes moteur)
+# /battery_state (niveau batterie)
+# /odom (odométrie)
+# /gallery_files (liste fichiers galerie)
 ```
 
 ### Accéder à l'interface
 
-Depuis n'importe quel navigateur sur le même réseau:
+Depuis n'importe quel navigateur sur le même réseau :
 
 ```
 http://<IP_ZEHNO>:8000
@@ -1016,7 +1173,79 @@ const rosRobot = new ROSLIB.Ros({
 
 ## 🔍 Troubleshooting
 
-### Navigateur affiche "Déconnecté"
+### Pas de vidéo (écran noir)
+
+**Cause**: Serveur WebRTC non lancé ou flux RTSP inaccessible
+
+**Solutions**:
+```bash
+# 1. Vérifier que le serveur WebRTC tourne
+ps aux | grep webrtc_server
+netstat -tlnp | grep 8091
+
+# 2. Tester le flux RTSP directement
+ffplay -rtsp_transport tcp rtsp://admin:ros2_2025@100.73.141.53:8554/h264Preview_01_main
+
+# 3. Vérifier les logs du serveur WebRTC
+cd ~/ros2_ws/src/web_control/web/stream/webrtc
+.venv/bin/python webrtc_server.py
+# Chercher : "WebRTC: client connecté" et "WebRTC: piste vidéo ajoutée"
+
+# 4. Vérifier le tunnel socat (si utilisé)
+ps aux | grep socat
+sudo lsof -i :8554
+
+# 5. Console navigateur (F12) - chercher erreurs WebSocket
+# Doit voir : "WebRTC: connecté"
+```
+
+### Audio ne fonctionne pas
+
+**Cause probable**: La caméra Reolink déclare une piste audio mais n'envoie pas de données
+
+**Vérification**:
+```bash
+# 1. Tester l'audio avec ffplay
+timeout 5 ffplay -nodisp -rtsp_transport tcp rtsp://admin:ros2_2025@100.73.141.53:8554/h264Preview_01_main
+
+# 2. Vérifier que la piste audio existe
+ffprobe -rtsp_transport tcp rtsp://admin:ros2_2025@100.73.141.53:8554/h264Preview_01_main 2>&1 | grep Audio
+
+# 3. Activer l'audio dans l'interface web de la caméra
+# Aller sur http://100.73.141.53 → Settings → Audio → Enable
+
+# 4. Vérifier que le serveur WebRTC ajoute l'audio
+# Dans les logs : "WebRTC: piste audio ajoutée"
+```
+
+**Note**: Si la caméra n'a pas de micro ou si l'audio est désactivé, les contrôles audio dans l'interface web ne fonctionneront pas. L'audio sera ajouté dans une future mise à jour une fois activé sur la caméra.
+
+### Photo/Vidéo ne s'enregistre pas
+
+**Cause**: Backend node non lancé ou permissions manquantes
+
+**Solutions**:
+```bash
+# 1. Vérifier que backend_node tourne
+ps aux | grep backend_node
+netstat -tlnp | grep 8000
+
+# 2. Vérifier les permissions du dossier galerie
+ls -la ~/robot_gallery/
+chmod 755 ~/robot_gallery/
+
+# 3. Vérifier les logs backend_node
+cd ~/ros2_ws
+source install/setup.bash
+python3 -m web_control.backend_node
+# Chercher : "Photo enregistrée" ou "Vidéo enregistrée"
+
+# 4. Tester l'upload manuellement
+curl -X POST "http://localhost:8000/upload_photo?filename=test.jpg" \
+  --data-binary "@/path/to/test.jpg"
+```
+
+### Navigateur affiche "Déconnecté" (ROS2)
 
 **Cause**: rosbridge n'est pas accessible
 
@@ -1037,25 +1266,6 @@ http://<IP_ZEHNO>:8000
 # Vérifier que ROS_DOMAIN_ID est identique
 echo "Zehno: $ROS_DOMAIN_ID"
 ssh pi@192.168.0.132 "echo Raspberry: \$ROS_DOMAIN_ID"
-```
-
-### Caméra affiche rien
-
-**Cause**: web_video_server ou topic `/image_raw` manquant
-
-**Solutions**:
-```bash
-# Sur la Raspberry
-ps aux | grep web_video_server
-ros2 topic list | grep image
-ros2 topic echo /image_raw --once  # Vérifier que la caméra envoie des données
-
-# Vérifier le port 8080
-netstat -tuln | grep 8080
-
-# Tester la caméra USB directement (V4L2)
-v4l2-ctl --list-devices
-v4l2-ctl --device=/dev/video0 --all  # Affiche les capacités
 ```
 
 ### Robot ne bouge pas malgré les contrôles
@@ -1081,35 +1291,48 @@ echo $ROS_DOMAIN_ID  # Doit être 42 sur les 2 machines
 echo $RMW_IMPLEMENTATION  # Doit être rmw_zenoh_cpp
 ```
 
-### Galerie/Trajets vides
+### Galerie vide
 
 **Cause**: backend_node ne publie pas ou fichiers manquants
 
 **Solutions**:
 ```bash
-# Vérifier les topics
+# Vérifier le topic
 ros2 topic echo /ui/gallery_files
-ros2 topic echo /ui/trajectory_files
 
 # Vérifier les fichiers
 ls -la ~/robot_gallery/
-ls -la ~/trajectories/
+
+# Vérifier le lien symbolique
+ls -la ~/ros2_ws/src/web_control/web/gallery
 
 # Vérifier que backend_node tourne
 ps aux | grep backend_node
 
 # Redémarrer backend_node
 pkill -f backend_node
+cd ~/ros2_ws && source install/setup.bash
 ros2 run web_control backend_node
 ```
 
 ### Latence vidéo élevée
 
-**Solutions**:
-- Réduire la qualité vidéo: `quality=80` dans app.js
-- Réduire la résolution: `&width=640&height=480`
-- Vérifier la bande WiFi
-- Augmenter la distance entre Zehno et Raspberry (moins d'obstacles)
+**Solutions WebRTC** (déjà faible latence):
+```bash
+# 1. Forcer UDP au lieu de TCP pour RTSP (plus rapide mais moins fiable)
+export RTSP_TRANSPORT=udp
+cd ~/ros2_ws/src/web_control/web/stream/webrtc
+.venv/bin/python webrtc_server.py
+
+# 2. Réduire la résolution de la caméra
+# Dans l'interface web Reolink : Settings → Video → Resolution → 1280x720
+
+# 3. Vérifier la bande passante réseau
+ping 100.73.141.53  # Ping de la caméra
+iperf3 -c <IP_RASPBERRY>  # Test débit
+
+# 4. Utiliser Ethernet au lieu de WiFi si possible
+```
 
 ### Connection perdue (ZENOH/DDS) - **CRITIQUE**
 
@@ -1136,7 +1359,7 @@ tailscale status
 echo "=== Vérification Zehno ==="
 echo "ROS_DOMAIN_ID: $ROS_DOMAIN_ID"
 echo "RMW_IMPLEMENTATION: $RMW_IMPLEMENTATION"
-ps aux | grep -E "rosbridge|backend|zenohd|image_tools"
+ps aux | grep -E "rosbridge|backend|zenohd"
 ros2 node list  # Doit afficher les nodes ROS2 locaux
 
 # ÉTAPE 2: Sur RASPBERRY (Saint-Cyr)

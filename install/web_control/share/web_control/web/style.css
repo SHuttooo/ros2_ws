@@ -152,6 +152,38 @@ header > div:last-child {
 .connected { background-color: #2ecc71; color: black; }
 .disconnected { background-color: #e74c3c; color: white; }
 
+.audio-controls {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.audio-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+}
+
+.audio-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.audio-slider {
+    width: 90px;
+    accent-color: var(--accent);
+}
+
 #battery {
     padding: 0.5vh 1vh;
     border-radius: 0.5vh;

@@ -205,7 +205,7 @@ document.body.addEventListener('wheel', (e) => {
             grid.innerHTML = "";
 
             files.forEach(file => {
-                const isVideo = file.toLowerCase().endsWith('.avi') || file.toLowerCase().endsWith('.mp4');
+                const isVideo = file.toLowerCase().endsWith('.avi') || file.toLowerCase().endsWith('.mp4') || file.toLowerCase().endsWith('.webm');
                 
                 // --- MODIFICATION IMPORTANTE ICI ---
                 // On ajoute "../" car le fichier HTML est dans le sous-dossier 'galerie'
@@ -245,7 +245,13 @@ document.body.addEventListener('wheel', (e) => {
 
                     const source = document.createElement('source');
                     source.src = fileUrl;
-                    source.type = file.toLowerCase().endsWith('.mp4') ? 'video/mp4' : 'video/avi';
+                    if (file.toLowerCase().endsWith('.mp4')) {
+                        source.type = 'video/mp4';
+                    } else if (file.toLowerCase().endsWith('.webm')) {
+                        source.type = 'video/webm';
+                    } else {
+                        source.type = 'video/avi';
+                    }
                     mediaElement.appendChild(source);
 
                     const buildPoster = () => {

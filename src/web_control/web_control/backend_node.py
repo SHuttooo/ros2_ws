@@ -4,6 +4,7 @@ import os
 import threading
 import http.server
 import socketserver
+from urllib.parse import urlparse, parse_qs
 import shutil
 import json
 from datetime import datetime
@@ -19,6 +20,9 @@ from web_control.gallery_manager import GalleryManager
 PORT_WEB = 8000
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
+    gallery_dir = None
+    gallery_mgr = None
+
     def log_message(self, format, *args):
         pass
 
@@ -27,6 +31,53 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
             super().copyfile(source, outputfile)
         except (BrokenPipeError, ConnectionResetError):
             pass
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path not in ("/upload_photo", "/upload_video"):
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        if not QuietHandler.gallery_dir:
+            self.send_response(500)
+            self.end_headers()
+            return
+
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+
+        data = self.rfile.read(length) if length > 0 else b""
+        params = parse_qs(parsed.query)
+        filename = params.get("filename", [""])[0]
+        filename = os.path.basename(filename) if filename else ""
+
+        if not filename:
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            ext = ".jpg" if parsed.path == "/upload_photo" else ".webm"
+            filename = f"capture_{stamp}{ext}"
+
+        if not data:
+            self.send_response(400)
+            self.end_headers()
+            return
+
+        path = os.path.join(QuietHandler.gallery_dir, filename)
+        try:
+            with open(path, "wb") as f:
+                f.write(data)
+        except Exception:
+            self.send_response(500)
+            self.end_headers()
+            return
+
+        if QuietHandler.gallery_mgr:
+            QuietHandler.gallery_mgr.publish_gallery()
+
+        self.send_response(200)
+        self.end_headers()
 
 class ThreadedHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
@@ -91,6 +142,9 @@ class WebBackend(Node):
         # Initialisation des managers avec le dossier SÉCURISÉ
         self.capture_mgr = CaptureManager(self, self.gallery_dir)
         self.gallery_mgr = GalleryManager(self, self.gallery_dir)
+
+        QuietHandler.gallery_dir = self.gallery_dir
+        QuietHandler.gallery_mgr = self.gallery_mgr
 
         # Services
         self.srv_photo = self.create_service(Trigger, '/camera/take_photo', self.cb_take_photo)
