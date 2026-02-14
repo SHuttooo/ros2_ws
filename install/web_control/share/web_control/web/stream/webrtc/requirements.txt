@@ -1,2 +1,1 @@
-aiortc==1.6.0
-aiohttp==3.9.5
+/home/matthieu/ros2_ws/build/web_control/web/stream/webrtc/requirements.txt

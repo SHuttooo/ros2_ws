@@ -2,15 +2,47 @@
 // 1. CONFIGURATION & CONNEXION
 // =======================================================================
 const serverIp = window.location.hostname;  // IP du serveur web
-const robotIp = "192.168.0.132";            // IP du robot/Raspberry
+const robotIp = "100.106.79.105";          // IP du robot/Raspberry
 const videoHost = serverIp === "" ? "localhost" : serverIp;
+const externalStreamUrl = "http://100.106.79.105:8889/mystream/";
 
 // Vidéo WebRTC (faible latence)
 const videoElement = document.getElementById('cameraFeed');
 const webrtcStatus = document.getElementById('webrtcStatus');
 
 if (videoElement) {
-    initWebRTC();
+    if (externalStreamUrl) {
+        initExternalStream();
+    } else {
+        initWebRTC();
+    }
+}
+
+function initExternalStream() {
+    const container = videoElement.parentElement;
+    if (!container) {
+        videoElement.src = externalStreamUrl;
+        videoElement.play().catch(() => {});
+        if (webrtcStatus) {
+            webrtcStatus.textContent = 'Flux externe';
+        }
+        return;
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.src = externalStreamUrl;
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = '0';
+    iframe.allow = 'autoplay; fullscreen';
+    container.replaceChild(iframe, videoElement);
+    if (webrtcStatus) {
+        if (location.protocol === 'https:' && externalStreamUrl.startsWith('http://')) {
+            webrtcStatus.textContent = 'Flux externe (HTTP bloqué en HTTPS)';
+        } else {
+            webrtcStatus.textContent = 'Flux externe';
+        }
+    }
 }
 
 function initWebRTC() {
@@ -116,67 +148,103 @@ const ros = new ROSLIB.Ros({ url: `ws://${window.location.hostname}:9090` });
 // WebSocket 2: Se connecte directement à la Raspberry pour /cmd_vel (commandes robot)
 const rosRobot = new ROSLIB.Ros({ url: `ws://${robotIp}:9090` });
 
+let rosServerConnected = false;
+let rosRobotConnected = false;
+
 ros.on('connection', () => {
+    rosServerConnected = true;
     document.getElementById('status').innerText = 'Connecté';
     document.getElementById('status').className = 'connected';
 });
 ros.on('error', (error) => {
+    rosServerConnected = false;
     document.getElementById('status').innerText = 'Erreur';
     document.getElementById('status').className = 'disconnected';
 });
 ros.on('close', () => {
+    rosServerConnected = false;
     document.getElementById('status').innerText = 'Déconnecté';
     document.getElementById('status').className = 'disconnected';
 });
+
+rosRobot.on('connection', () => {
+    rosRobotConnected = true;
+    console.info('ROS Robot: connecté');
+});
+
+rosRobot.on('error', (error) => {
+    rosRobotConnected = false;
+    console.warn('ROS Robot: erreur connexion', error);
+});
+
+rosRobot.on('close', () => {
+    rosRobotConnected = false;
+    console.warn('ROS Robot: déconnecté');
+});
+
+function createRobotPublisher(name, messageType, options = {}) {
+    const { robotOnly = false } = options;
+    const robotTopic = new ROSLIB.Topic({ ros: rosRobot, name, messageType });
+    const serverTopic = robotOnly ? null : new ROSLIB.Topic({ ros, name, messageType });
+
+    return {
+        publish(message) {
+            let robotSent = false;
+            let serverSent = false;
+
+            if (rosRobotConnected || robotOnly) {
+                try {
+                    robotTopic.publish(message);
+                    robotSent = true;
+                } catch (err) {
+                    console.error(`Erreur publish robot ${name}:`, err);
+                }
+            }
+
+            if (!robotOnly && rosServerConnected && serverTopic) {
+                try {
+                    serverTopic.publish(message);
+                    serverSent = true;
+                } catch (err) {
+                    console.error(`Erreur publish serveur ${name}:`, err);
+                }
+            }
+
+            if (!robotSent && !serverSent) {
+                console.warn(`Topic ${name} non envoyé (aucune connexion disponible)`);
+            }
+        }
+    };
+}
 
 // =======================================================================
 // 2. TOPICS
 // =======================================================================
 
 // Robot (TwistStamped - type imposé par un autre node)
-const cmdVelPub = new ROSLIB.Topic({
-    ros: rosRobot,  // Utilise la connexion directe à la Raspberry
-    name: '/cmd_vel',
-    messageType: 'geometry_msgs/TwistStamped'
-});
+const cmdVelPub = createRobotPublisher('/cmd_vel', 'geometry_msgs/TwistStamped');
 
 // PTZ (Point: x, y)
-const ptzPub = new ROSLIB.Topic({
-    ros: ros,
-    name: '/camera/ptz',
-    messageType: 'geometry_msgs/Point' // Changé de Twist à Point
-});
+const ptzPub = createRobotPublisher('/camera/ptz', 'geometry_msgs/Point');
 
 // Mission Status
-const missionPub = new ROSLIB.Topic({
-    ros: ros,
-    name: '/mission/status',
-    messageType: 'std_msgs/Bool'
-});
+const missionPub = createRobotPublisher('/mission/status', 'std_msgs/Bool');
 
 // Delete Image (Nouveau)
-const deletePub = new ROSLIB.Topic({
-    ros: ros,
-    name: '/camera/delete_image',
-    messageType: 'std_msgs/String'
-});
+const deletePub = createRobotPublisher('/camera/delete_image', 'std_msgs/String');
 
-const zoomPub = new ROSLIB.Topic({ ros: ros, name: '/camera/zoom', messageType: 'std_msgs/Float32' });
-const focusPub = new ROSLIB.Topic({ ros: ros, name: '/camera/focus', messageType: 'std_msgs/Float32' });
-const autofocusPub = new ROSLIB.Topic({ ros: ros, name: '/camera/autofocus', messageType: 'std_msgs/Bool' });
-const lightPub = new ROSLIB.Topic({ ros: ros, name: '/camera/light', messageType: 'std_msgs/Bool' });
-const alertPub = new ROSLIB.Topic({ ros: ros, name: '/camera/alert', messageType: 'std_msgs/Bool' });
-const robotVolumePub = new ROSLIB.Topic({ ros: ros, name: '/robot/volume', messageType: 'std_msgs/Float32' });
-const armSpeedPub = new ROSLIB.Topic({ ros: ros, name: '/robot/arm_speed', messageType: 'std_msgs/Float32' });
-const armPosPub = new ROSLIB.Topic({ ros: ros, name: '/robot/arm_position', messageType: 'std_msgs/Float32' });
-const clickPub = new ROSLIB.Topic({ ros: ros, name: '/ui/click', messageType: 'geometry_msgs/Point' });
+const zoomPub = createRobotPublisher('/camera/zoom', 'std_msgs/Float32');
+const focusPub = createRobotPublisher('/camera/focus', 'std_msgs/Float32');
+const autofocusPub = createRobotPublisher('/camera/autofocus', 'std_msgs/Bool');
+const lightPub = createRobotPublisher('/camera/light', 'std_msgs/Bool');
+const alertPub = createRobotPublisher('/camera/alert', 'std_msgs/Bool');
+const robotVolumePub = createRobotPublisher('/robot/volume', 'std_msgs/Float32');
+const armSpeedPub = createRobotPublisher('/robot/arm_speed', 'std_msgs/Float32');
+const armPosPub = createRobotPublisher('/robot/arm_position', 'std_msgs/Float32');
+const clickPub = createRobotPublisher('/ui/click', 'geometry_msgs/Point');
 
 // Logs UI
-const logPub = new ROSLIB.Topic({
-    ros: ros,
-    name: '/ui/system_logs',
-    messageType: 'std_msgs/String'
-});
+const logPub = createRobotPublisher('/ui/system_logs', 'std_msgs/String');
 
 function logEvent(message, level = 'info') {
     try {
@@ -189,11 +257,7 @@ function logEvent(message, level = 'info') {
 }
 
 // Topic pour l'arrêt d'urgence
-const emergencyPub = new ROSLIB.Topic({
-    ros: ros,
-    name: '/robot/emergency_stop',
-    messageType: 'std_msgs/Bool'
-});
+const emergencyPub = createRobotPublisher('/robot/emergency_stop', 'std_msgs/Bool');
 
 // Topic pour recevoir la liste des fichiers de trajectoire
 const trajListSub = new ROSLIB.Topic({ 
@@ -766,9 +830,14 @@ function handleMapClick(event) {
 }
 
 function toggleFullscreen() {
-    const elem = document.getElementById('cameraFeed');
-    if (!document.fullscreenElement) elem.requestFullscreen().catch(err => {});
-    else document.exitFullscreen();
+    const container = document.getElementById('videoContainer');
+    const elem = container || document.getElementById('cameraFeed');
+    if (!elem) return;
+    if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(err => {});
+    } else {
+        document.exitFullscreen();
+    }
     logEvent('Plein écran vidéo basculé', 'info');
 }
 

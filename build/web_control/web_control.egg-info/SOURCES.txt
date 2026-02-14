@@ -2220,3 +2220,10 @@ web_control/__init__.py
 web_control/backend_node.py
 web_control/capture_manager.py
 web_control/gallery_manager.py
+web_control.egg-info/PKG-INFO
+web_control.egg-info/SOURCES.txt
+web_control.egg-info/dependency_links.txt
+web_control.egg-info/entry_points.txt
+web_control.egg-info/requires.txt
+web_control.egg-info/top_level.txt
+web_control.egg-info/zip-safe

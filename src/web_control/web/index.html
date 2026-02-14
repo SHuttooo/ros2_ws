@@ -43,12 +43,8 @@ document.body.addEventListener('wheel', (e) => {
         <div class="panel video-panel column1">
             <div class="video-wrapper">
                 <h2>🎥 Live Feed</h2>
-                <div class="video-container" onclick="toggleFullscreen()" style="position: relative;">
+                <div class="video-container" id="videoContainer" onclick="toggleFullscreen()" style="position: relative;">
                     <video id="cameraFeed" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: contain; background: #000;"></video>
-                    <div class="audio-controls" onclick="event.stopPropagation();">
-                        <button id="btnAudio" class="audio-btn" onclick="toggleAudio();" title="Activer/Désactiver le son">🔇</button>
-                        <input id="audioSlider" class="audio-slider" type="range" min="0" max="100" value="0" step="1" title="Volume">
-                    </div>
                 </div>
                 <p id="webrtcStatus" class="hint">WebRTC: connexion...</p>
             </div>
