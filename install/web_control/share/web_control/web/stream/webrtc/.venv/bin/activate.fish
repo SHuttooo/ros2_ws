@@ -1,1 +1,0 @@
-/home/matthieu/ros2_ws/build/web_control/web/stream/webrtc/.venv/bin/activate.fish

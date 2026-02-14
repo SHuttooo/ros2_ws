@@ -14,18 +14,31 @@ ros2 launch web_control web_control_full.launch.py
 
 
 
-raspberry :
+ROBOT :
+
+Terminal 1
 
 source /opt/ros/jazzy/setup.bash
 export ROS_DOMAIN_ID=42
-ros2 launch turtlebot3_bringup robot.launch.py
-ros2 run rosbridge_server rosbridge_websocket
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml address:=100.106.79.105
+
+Terminal 2:
+
+python3 camera_control_node.py
 
 
+#ros2 launch turtlebot3_bringup robot.launch.py
+SERVEUR :
+
+Terminal 1 :
+
+ros2 run rmw_zenoh_cpp rmw_zenohd
+
+Terminal 2 :
 
 source /opt/ros/jazzy/setup.bash
 export ROS_DOMAIN_ID=42
 cd ~/ros2_ws
+colcon build --symlink-install
 ros2 launch web_control web_control_full.launch.py
-ros2 run rosbridge_server rosbridge_websocket
 
