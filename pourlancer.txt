@@ -38,7 +38,22 @@ Terminal 2 :
 
 source /opt/ros/jazzy/setup.bash
 export ROS_DOMAIN_ID=42
+
 cd ~/ros2_ws
 colcon build --symlink-install
 ros2 launch web_control web_control_full.launch.py
 
+
+
+
+Pour lancer côté robot : 
+- dans le dossier mediamtx, dans mediamtx.yaml ligne "source: rtsp://admin:ros2_2025@10.42.0.188:554/h264Preview_01_main", bien mettre l'IP de la webcam, que l'on peut retrouver grâce au doc tutoriel sur comment rediriger sa caméra.
+
+Terminal 1 (recevoir topic ros2)
+
+sudo tailscale up (vérifier avant qu'on est connecté sur le bon compte tailscale grâce a "sudo tailscale login")
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml address:=0.0.0.0 port:=9090
+
+Terminal 2
+
+./mediamtx
